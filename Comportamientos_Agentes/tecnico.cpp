@@ -32,8 +32,72 @@ Action ComportamientoTecnico::think(Sensores sensores) {
 // Niveles del técnico
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   Action accion = IDLE;
+  ActualizarMapa(sensores);
 
+  if(sensores.superficie[0] == 'D'){
+    tiene_zapatillas = true;
+  }
+
+  if(sensores.superficie[0] == 'U'){
+    return IDLE; 
+  }
+
+  if ( sensores.agentes[2] == 'i' or sensores.agentes[1] == 'i' or sensores.agentes[3] == 'i'){
+    ultima_accion = IDLE;
+    return IDLE;
+  }
+  
+  char i = ViablePorAltura(sensores.superficie[1], sensores.cota[1] - sensores.cota[0]);
+  char c = ViablePorAltura(sensores.superficie[2], sensores.cota[2] - sensores.cota[0]);
+  char d = ViablePorAltura(sensores.superficie[3], sensores.cota[3] - sensores.cota[0]);
+
+  int pos = VeoCasillaInteresante_0(i, c, d);
+  switch (pos)
+  {
+  case 3:
+    accion = TURN_SR;
+    break;
+  case 2:
+    accion = WALK;
+    break;
+  default:
+    accion = TURN_SL;
+    break;
+  }
+
+  ultima_accion = accion;
   return accion;
+}
+
+/**
+ * @brief Determina la mejor oppcion entra las 3 casillas que tiene delante
+ * @param i terreno que hay en la posicion 1 de la superficie 
+ * @param c terreno que hay en la posicion 2 de la superficie 
+ * @param d terreno que hay en la posicion 3 de la superficie
+ * @return 2 si es mejor WALK, 3 si es mejor TURN_SR, 1 si es mejor TURN_SL, o nada interesante
+ */
+int ComportamientoTecnico::VeoCasillaInteresante_0(char i, char c, char d){
+  if( c =='U') return 2;
+  else if( i == 'U') return 1;
+  else if( d == 'U') return 3;
+  if( c == 'C') return 2;
+  else if( i == 'C') return 1;
+  else if( d == 'C') return 3;
+  else return 0;
+}
+
+/**
+ * @brief Determina casilla viable
+ * @param casilla que se quiere comprobar
+ * @param dif de altura entre la casilla actual y la casilla a comprobar
+ * @param zap si se tiene la zapatillas puestas
+ * @return 'P' si no es viable y la casilla en otro caso
+ */
+char ComportamientoTecnico::ViablePorAltura(char casilla, int dif){
+  if(abs(dif)<= 1 ){
+    return casilla;
+  }
+  else return 'P';
 }
 
 /**
@@ -52,8 +116,56 @@ bool ComportamientoTecnico::es_camino(unsigned char c) const {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+  ActualizarMapa(sensores);
+
+  if(sensores.superficie[0] == 'D'){
+    tiene_zapatillas = true;
+  }
+
+  
+  char i = ViablePorAltura(sensores.superficie[1], sensores.cota[1] - sensores.cota[0] );
+  char c = ViablePorAltura(sensores.superficie[2],  sensores.cota[2] - sensores.cota[0] );
+  char d = ViablePorAltura(sensores.superficie[3],  sensores.cota[3] - sensores.cota[0] );
+
+  int pos = VeoCasillaInteresante_1(i, c, d);
+  switch (pos)
+  {
+  case 3:
+    accion = TURN_SR;
+    break;
+  case 2:
+    accion = WALK;
+    break;
+  default:
+    accion = TURN_SL;
+    break;
+  }
+
+  ultima_accion = accion;
+  return accion;
 }
+
+/**
+ * @brief Determina la mejor oppcion entra las 3 casillas que tiene delante
+ * @param i terreno que hay en la posicion 1 de la superficie 
+ * @param c terreno que hay en la posicion 2 de la superficie 
+ * @param d terreno que hay en la posicion 3 de la superficie
+ * @return 2 si es mejor WALK, 3 si es mejor TURN_SR, 1 si es mejor TURN_SL, o nada interesante
+ */
+int ComportamientoTecnico::VeoCasillaInteresante_1(char i, char c, char d){
+  if( c =='U') return 2;
+  else if( i == 'U') return 1;
+  else if( d == 'U') return 3;
+  if( c == 'C') return 2;
+  else if( i == 'C') return 1;
+  else if( d == 'C') return 3;
+  if( c == 'S') return 2;
+  else if( i == 'S') return 1;
+  else if( d == 'S') return 3;
+  else return 0;
+}
+
 
 /**
  * @brief Comportamiento del técnico para el Nivel 2.
@@ -99,8 +211,6 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
   return IDLE;
 }
-
-
 
 
 // =========================================================================

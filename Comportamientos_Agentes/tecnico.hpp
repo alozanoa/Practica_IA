@@ -32,7 +32,11 @@ public:
    * @param size Tamaño del mapa (si es 0, se inicializa más tarde)
    */
   ComportamientoTecnico(unsigned int size = 0) : Comportamiento(size) {
-    // Inicializar Variables de Estado
+    ultima_accion = IDLE;
+    tiene_zapatillas = false;
+    choque_muro = 0;
+    giro45Der = 0;
+    giro45Izq = 0;
   }
 
   /**
@@ -182,11 +186,24 @@ protected:
  * @param plan  Lista de acciones del plan.
  */
   void VisualizaPlan(const ubicacion &st, const list<Action> &plan);
+   
+  // =========================================================================
+  // FUNCIONES CREADAS POR EL ALUMNO
+  // =========================================================================
+
+  int VeoCasillaInteresante_0(char i, char c, char d);
+  int VeoCasillaInteresante_1(char i, char c, char d);
+  char ViablePorAltura(char casilla, int dif );
 
 private:
   // =========================================================================
   // VARIABLES DE ESTADO (PUEDEN SER EXTENDIDAS POR EL ALUMNO)
   // =========================================================================
+  Action ultima_accion;
+  bool tiene_zapatillas;
+  int choque_muro; // Contador de choques contra muro o precipicio
+  int giro45Der;   // Contador para realizar giro de 45 grados a la
+  int giro45Izq;   // Contador para realizar giro de 45 grados a la izquierda
 
   
 };

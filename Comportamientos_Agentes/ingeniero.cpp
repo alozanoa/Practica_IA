@@ -47,8 +47,76 @@ Action ComportamientoIngeniero::think(Sensores sensores)
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores)
 {
   Action accion = IDLE;
+  ActualizarMapa(sensores);
+
+  if(sensores.superficie[0] == 'D'){
+    tiene_zapatillas = true;
+  }
+
+  if(sensores.superficie[0] == 'U'){
+    return IDLE; 
+  }
+
+  char i = ViablePorAltura(sensores.superficie[1], sensores.agentes[1], sensores.cota[1] - sensores.cota[0], tiene_zapatillas);
+  char c = ViablePorAltura(sensores.superficie[2], sensores.agentes[2], sensores.cota[2] - sensores.cota[0], tiene_zapatillas);
+  char d = ViablePorAltura(sensores.superficie[3], sensores.agentes[3], sensores.cota[3] - sensores.cota[0], tiene_zapatillas);
+
+  int pos = VeoCasillaInteresante_0(i, c, d, tiene_zapatillas);
+  switch (pos)
+  {
+  case 3:
+    accion = TURN_SR;
+    break;
+  case 2:
+    accion = WALK;
+    break;
+  default:
+    accion = TURN_SL;
+    break;
+  }
+
+  ultima_accion = accion;
   return accion;
 }
+
+/**
+ * @brief Determina la mejor oppcion entra las 3 casillas que tiene delante
+ * @param i terreno que hay en la posicion 1 de la superficie 
+ * @param c terreno que hay en la posicion 2 de la superficie 
+ * @param d terreno que hay en la posicion 3 de la superficie
+ * @return 2 si es mejor WALK, 3 si es mejor TURN_SR, 1 si es mejor TURN_SL, o nada interesante
+ */
+int ComportamientoIngeniero::VeoCasillaInteresante_0(char i, char c, char d, bool zap){
+  if( c =='U') return 2;
+  else if( i == 'U') return 1;
+  else if( d == 'U') return 3;
+  else if( !zap ) {
+    if( c == 'D') return 2;
+    else if( i == 'D') return 1;
+    else if( d == 'D') return 3;
+  }
+  if( c == 'C') return 2;
+  else if( i == 'C') return 1;
+  else if( d == 'C') return 3;
+  else return 0;
+}
+
+
+/**
+ * @brief Determina casilla viable
+ * @param casilla que se quiere comprobar
+ * @param agente el agente en la casilla
+ * @param dif de altura entre la casilla actual y la casilla a comprobar
+ * @param zap si se tiene la zapatillas puestas
+ * @return 'P' si no es viable y la casilla en otro caso
+ */
+char ComportamientoIngeniero::ViablePorAltura(char casilla, char agente, int dif, bool zap){
+  if((abs(dif)<= 1 or (zap and abs(dif) <= 2)) and agente == '_' ){
+    return casilla;
+  }
+  else return 'P';
+}
+
 
 /**
  * @brief Comprueba si una celda es de tipo camino transitable.
@@ -67,8 +135,58 @@ bool ComportamientoIngeniero::es_camino(unsigned char c) const
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores)
 {
-  // TODO: Implementar comportamiento reactivo para el Nivel 1.
-  return IDLE;
+  Action accion = IDLE;
+  ActualizarMapa(sensores);
+
+  if(sensores.superficie[0] == 'D'){
+    tiene_zapatillas = true;
+  }
+
+  
+  char i = ViablePorAltura(sensores.superficie[1], sensores.agentes[1], sensores.cota[1] - sensores.cota[0], tiene_zapatillas);
+  char c = ViablePorAltura(sensores.superficie[2], sensores.agentes[2], sensores.cota[2] - sensores.cota[0], tiene_zapatillas);
+  char d = ViablePorAltura(sensores.superficie[3], sensores.agentes[3], sensores.cota[3] - sensores.cota[0], tiene_zapatillas);
+
+  int pos = VeoCasillaInteresante_1(i, c, d, tiene_zapatillas);
+  switch (pos)
+  {
+  case 3:
+    accion = TURN_SR;
+    break;
+  case 2:
+    accion = WALK;
+    break;
+  default:
+    accion = TURN_SL;
+    break;
+  }
+
+  ultima_accion = accion;
+  return accion;
+}
+
+
+/**
+ * @brief Determina la mejor oppcion entra las 3 casillas que tiene delante
+ * @param i terreno que hay en la posicion 1 de la superficie 
+ * @param c terreno que hay en la posicion 2 de la superficie 
+ * @param d terreno que hay en la posicion 3 de la superficie
+ * @return 2 si es mejor WALK, 3 si es mejor TURN_SR, 1 si es mejor TURN_SL, o nada interesante
+ */
+int ComportamientoIngeniero::VeoCasillaInteresante_1(char i, char c, char d, bool zap){
+  
+  if( !zap ) {
+    if( c == 'D') return 2;
+    else if( i == 'D') return 1;
+    else if( d == 'D') return 3;
+  }
+  if( c == 'C') return 2;
+  else if( i == 'C') return 1;
+  else if( d == 'C') return 3;
+  else if( c == 'S') return 2;
+  else if( i == 'S') return 1;
+  else if( d == 'S') return 3;
+  else return 0;
 }
 
 // Niveles avanzados (Uso de búsqueda)

@@ -21,7 +21,11 @@ public:
    * @param size Tamaño del mapa (si es 0, se inicializa más tarde)
    */
   ComportamientoIngeniero(unsigned int size = 0) : Comportamiento(size) {
-    // Inicializar Variables de Estado
+    ultima_accion = IDLE;
+    tiene_zapatillas = false;
+    choque_muro = 0;
+    giro45Der = 0;
+    giro45Izq = 0;
   }
 
   /**
@@ -176,13 +180,24 @@ protected:
  */
   void VisualizaRedTuberias(const list<Paso> &plan);
 
+ // =========================================================================
+  // FUNCIONES CREADAS POR EL ALUMNO
+  // =========================================================================
 
+  int VeoCasillaInteresante_0(char i, char c, char d, bool zap);
+  int VeoCasillaInteresante_1(char i, char c, char d, bool zap);
+  char ViablePorAltura(char casilla,char agente, int dif, bool zap);
 
 private:
   // =========================================================================
   // VARIABLES DE ESTADO (PUEDEN SER EXTENDIDAS POR EL ALUMNO)
   // =========================================================================
 
+  Action ultima_accion;
+  bool tiene_zapatillas;
+  int choque_muro;
+  int giro45Der;
+  int giro45Izq;
 };
 
 #endif
