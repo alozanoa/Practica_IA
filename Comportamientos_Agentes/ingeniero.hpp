@@ -26,6 +26,10 @@ public:
     choque_muro = 0;
     giro45Der = 0;
     giro45Izq = 0;
+    tam_size = (size == 0) ? 100 : size; // Si no se proporciona tamaño, usar 100x100 por defecto
+    mapaExplorado = std::vector<std::vector<unsigned char>>(size, std::vector<unsigned char>(size, 0));
+    bucle = false;
+    giros = 0;
   }
 
   /**
@@ -187,6 +191,9 @@ protected:
   int VeoCasillaInteresante_0(char i, char c, char d, bool zap);
   int VeoCasillaInteresante_1(char i, char c, char d, bool zap);
   char ViablePorAltura(char casilla,char agente, int dif, bool zap);
+  char ViablePorAltura_1(char casilla,char agente, int dif, bool zap, int vecesExplorada);
+  void ActualizarExploracion(int posf, int posc, int brujula);
+  int vecesVistas(int posf, int posc, Orientacion brujula);
 
 private:
   // =========================================================================
@@ -198,6 +205,11 @@ private:
   int choque_muro;
   int giro45Der;
   int giro45Izq;
+  int tam_size; // Tamaño del mapa explorado
+  std::vector<std::vector<unsigned char>> mapaExplorado; // hacia donde se ha movido el agente
+  int giros; // Contador de giros para detectar bucles
+  bool bucle; // Indica si el agente está actualmente en un bucle
+
 };
 
 #endif

@@ -94,7 +94,7 @@ int ComportamientoTecnico::VeoCasillaInteresante_0(char i, char c, char d){
  * @return 'P' si no es viable y la casilla en otro caso
  */
 char ComportamientoTecnico::ViablePorAltura(char casilla, int dif){
-  if(abs(dif)<= 1 ){
+  if(abs(dif)<= 1 and casilla != 'M' and casilla != 'B' ){
     return casilla;
   }
   else return 'P';
@@ -119,16 +119,67 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
   Action accion = IDLE;
   ActualizarMapa(sensores);
 
+  mapaExplorado[sensores.posF][sensores.posC] ++; // Marcar la posición actual como explorada
+
   if(sensores.superficie[0] == 'D'){
     tiene_zapatillas = true;
   }
 
-  
-  char i = ViablePorAltura(sensores.superficie[1], sensores.cota[1] - sensores.cota[0] );
-  char c = ViablePorAltura(sensores.superficie[2],  sensores.cota[2] - sensores.cota[0] );
-  char d = ViablePorAltura(sensores.superficie[3],  sensores.cota[3] - sensores.cota[0] );
+  if( ultima_accion == TURN_SL) giros++;
+  else giros = 0;
+
+  if(giros >= 7){
+    bucle = true;
+    giros = 0;
+  }
+
+  char adelante = ViablePorAltura(sensores.superficie[2],  sensores.cota[2] - sensores.cota[0]);
+
+  Orientacion rumboi = sensores.rumbo;
+  Orientacion rumbod = rumboi ;
+
+  if (sensores.rumbo == norte){
+    rumboi = noroeste;
+    rumbod = noreste;
+  }
+  else if(sensores.rumbo == noreste){
+    rumboi = norte;
+    rumbod = este;
+  }
+  else if(sensores.rumbo == este){
+    rumboi = noreste;
+    rumbod = sureste;
+  }
+  else if(sensores.rumbo == sureste){
+    rumboi = este;
+    rumbod = sur;
+  }
+  else if(sensores.rumbo == sur){
+    rumboi = sureste;
+    rumbod = suroeste;
+  }
+  else if(sensores.rumbo == suroeste){
+    rumboi = sur;
+    rumbod = oeste;
+  }
+  else if(sensores.rumbo == oeste){
+    rumboi = suroeste;
+    rumbod = noroeste;
+  }
+  else if(sensores.rumbo == noroeste){
+    rumboi = oeste;
+    rumbod = norte;
+  }
+
+  char i = ViablePorAltura_1(sensores.superficie[1], sensores.cota[1] - sensores.cota[0],vecesVistas(sensores.posF, sensores.posC, rumboi));
+  char c = ViablePorAltura_1(sensores.superficie[2],  sensores.cota[2] - sensores.cota[0], vecesVistas(sensores.posF, sensores.posC, sensores.rumbo));
+  char d = ViablePorAltura_1(sensores.superficie[3],  sensores.cota[3] - sensores.cota[0], vecesVistas(sensores.posF, sensores.posC, rumbod));
 
   int pos = VeoCasillaInteresante_1(i, c, d);
+
+  //printf (" Rumbo: %d, Superficie: %c, pos: %d  bucle: %d giros: %d\n", sensores.rumbo, sensores.superficie[0], pos, bucle, giros);
+  //printf(" %d %d %d\n %d n %d\n %d %d %d\n\n", mapaExplorado[sensores.posF-1][sensores.posC-1], mapaExplorado[sensores.posF-1][sensores.posC], mapaExplorado[sensores.posF-1][sensores.posC+1], mapaExplorado[sensores.posF][sensores.posC-1], mapaExplorado[sensores.posF][sensores.posC+1], mapaExplorado[sensores.posF+1][sensores.posC-1], mapaExplorado[sensores.posF+1][sensores.posC], mapaExplorado[sensores.posF+1][sensores.posC+1]);
+
   switch (pos)
   {
   case 3:
@@ -138,7 +189,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
     accion = WALK;
     break;
   default:
-    accion = TURN_SL;
+    if(bucle and adelante != 'P'){
+      accion = WALK;
+      bucle = false;
+    }
+    else accion = TURN_SL;
     break;
   }
 
@@ -154,16 +209,132 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
  * @return 2 si es mejor WALK, 3 si es mejor TURN_SR, 1 si es mejor TURN_SL, o nada interesante
  */
 int ComportamientoTecnico::VeoCasillaInteresante_1(char i, char c, char d){
-  if( c =='U') return 2;
+  if ( c =='U') return 2;
   else if( i == 'U') return 1;
   else if( d == 'U') return 3;
-  if( c == 'C') return 2;
+  else if( c == 'C') return 2;
   else if( i == 'C') return 1;
   else if( d == 'C') return 3;
-  if( c == 'S') return 2;
+  else if( c == 'S') return 2;
   else if( i == 'S') return 1;
   else if( d == 'S') return 3;
-  else return 0;
+  else if (c == 'H') return 2;
+  else if (i == 'H') return 1;
+  else if (d == 'H') return 3;
+  else if (c == 'A') return 2;
+  else if (i == 'A') return 1;
+  else if (d == 'A') return 3;
+  return 0;
+}
+
+char ComportamientoTecnico::ViablePorAltura_1(char casilla,  int dif,  int vecesExplorada){
+  //printf("Casilla: %c, Dif: %d, VecesExplorada: %d\n", casilla,  dif, vecesExplorada);
+  if(abs(dif)<= 1 and casilla != 'M' and casilla != 'B'){
+    if(vecesExplorada > 0){
+      return 'P';
+    }
+    else{
+      return casilla;
+    }
+  }
+  else return 'P';
+}
+
+
+
+int ComportamientoTecnico::vecesVistas(int posf, int posc, Orientacion brujula){
+
+  if(brujula == norte) return mapaExplorado[posf-1][posc];
+  if(brujula == noreste) return mapaExplorado[posf-1][posc+1];
+  if(brujula == este) return mapaExplorado[posf][posc+1];
+  if(brujula == sureste) return mapaExplorado[posf+1][posc+1];
+  if(brujula == sur) return mapaExplorado[posf+1][posc];
+  if(brujula == suroeste) return mapaExplorado[posf+1][posc-1];
+  if(brujula == oeste) return mapaExplorado[posf][posc-1];
+  if(brujula == noroeste) return mapaExplorado[posf-1][posc-1];
+
+  return 0;
+}
+
+
+
+/**
+ * @brief Mapa de vistos por el agente
+ * @param posf Fila de la posición actual.
+ * @param posc Columna de la posición actual.
+ * @param brujula Orientación del agente.
+ * @return Acción a realizar.
+ */
+void ComportamientoTecnico::ActualizarExploracion(int posf, int posc, int brujula){
+ 
+  mapaExplorado[posf][posc] = 1; // Marcar la posición actual como explorada
+
+  switch (brujula)
+  {  
+    case norte:
+      for (int j = 1; j < 4; j++)
+        for (int i = -j; i <= j; i++)
+          mapaExplorado[posf - j][posc + i] = 1; // Marcar las casillas delante como exploradas
+      break;
+    case noreste:
+      mapaExplorado[posf - 1][posc] = 1;
+      mapaExplorado[posf - 1][posc + 1] = 1;
+      mapaExplorado[posf][posc + 1] = 1;
+      mapaExplorado[posf - 2][posc] = 1;
+      mapaExplorado[posf - 2][posc + 1] = 1;
+      mapaExplorado[posf - 2][posc + 2] = 1;
+      mapaExplorado[posf - 1][posc + 2] = 1;
+      mapaExplorado[posf][posc + 2] = 1;
+      break;
+    case este:
+      for (int j = 1; j < 4; j++)
+        for (int i = -j; i <= j; i++)          
+          mapaExplorado[posf + i][posc + j] = 1; // Marcar las casillas delante como exploradas
+      break;
+    case sureste:
+      mapaExplorado[posf][posc + 1] = 1;
+      mapaExplorado[posf + 1][posc + 1] = 1;
+      mapaExplorado[posf + 1][posc] = 1;
+      mapaExplorado[posf][posc + 2] = 1;
+      mapaExplorado[posf + 1][posc + 2] = 1;
+      mapaExplorado[posf + 2][posc + 2] = 1;
+      mapaExplorado[posf + 2][posc + 1] = 1;
+      mapaExplorado[posf + 2][posc] = 1;
+      break;
+    case sur:
+      for (int j = 1; j < 4; j++)
+        for (int i = -j; i <= j; i++)
+          mapaExplorado[posf + j][posc - i] = 1; // Marcar las casillas delante como exploradas
+      break;
+    case suroeste:
+      mapaExplorado[posf + 1][posc] = 1;
+      mapaExplorado[posf + 1][posc - 1] = 1;
+      mapaExplorado[posf][posc - 1] = 1;    
+      mapaExplorado[posf + 2][posc] = 1;
+      mapaExplorado[posf + 2][posc - 1] = 1;
+      mapaExplorado[posf + 2][posc - 2] = 1;
+      mapaExplorado[posf + 1][posc - 2] = 1;
+      mapaExplorado[posf][posc - 2] = 1;   
+      break;
+    case oeste:
+      for (int j = 1; j < 4; j++)
+        for (int i = -j; i <= j; i++)
+          mapaExplorado[posf - i][posc - j] = 1; // Marcar las casillas delante como exploradas
+      break;
+    case noroeste:
+      mapaExplorado[posf - 1][posc] = 1;
+      mapaExplorado[posf - 1][posc - 1] = 1;
+      mapaExplorado[posf][posc - 1] = 1;
+      mapaExplorado[posf - 2][posc] = 1;
+      mapaExplorado[posf - 2][posc - 1] = 1;
+      mapaExplorado[posf - 2][posc - 2] = 1;
+      mapaExplorado[posf - 1][posc - 2] = 1;
+      mapaExplorado[posf][posc - 2] = 1;
+      break;
+
+    default:
+      break;
+  }
 }
 
 
@@ -209,6 +380,15 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
+  return IDLE;
+}
+
+/**
+ * @brief Comportamiento del técnico para el Nivel E (especial tutorial parte 2).
+ * @param sensores Datos actuales de los sensores.
+ * @return Acción a realizar.
+ */
+Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
   return IDLE;
 }
 

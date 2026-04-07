@@ -37,6 +37,10 @@ public:
     choque_muro = 0;
     giro45Der = 0;
     giro45Izq = 0;
+    size = (size == 0) ? 100 : size; // Si no se proporciona tamaño, usar 100x100 por defecto
+    mapaExplorado = std::vector<std::vector<unsigned char>>(size, std::vector<unsigned char>(size, 0));
+    bucle = false;
+    giros = 0;
   }
 
   /**
@@ -121,6 +125,13 @@ public:
  */
   Action ComportamientoTecnicoNivel_6(Sensores sensores);
 
+ /**
+ * @brief Comportamiento del técnico para el Nivel E (especial tutorial parte 2).
+ * @param sensores Datos actuales de los sensores.
+ * @return Acción a realizar.
+ */
+  Action ComportamientoTecnicoNivel_E(Sensores sensores);
+
 protected:
   // =========================================================================
   // FUNCIONES PROPORCIONADAS
@@ -194,6 +205,10 @@ protected:
   int VeoCasillaInteresante_0(char i, char c, char d);
   int VeoCasillaInteresante_1(char i, char c, char d);
   char ViablePorAltura(char casilla, int dif );
+  char ViablePorAltura_1(char casilla, int dif,  int vecesExplorada);
+  int vecesVistas(int posf, int posc, Orientacion brujula);
+  void ActualizarExploracion(int posf, int posc, int brujula);
+
 
 private:
   // =========================================================================
@@ -204,8 +219,9 @@ private:
   int choque_muro; // Contador de choques contra muro o precipicio
   int giro45Der;   // Contador para realizar giro de 45 grados a la
   int giro45Izq;   // Contador para realizar giro de 45 grados a la izquierda
-
-  
+  std::vector<std::vector<unsigned char>> mapaExplorado; // hacia donde se ha movido el agente
+  bool bucle;
+  int giros;
 };
 
 #endif
