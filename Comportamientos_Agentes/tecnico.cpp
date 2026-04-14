@@ -19,7 +19,8 @@ Action ComportamientoTecnico::think(Sensores sensores) {
     case 0: accion = ComportamientoTecnicoNivel_0(sensores); break;
     case 1: accion = ComportamientoTecnicoNivel_1(sensores); break;
     case 2: accion = ComportamientoTecnicoNivel_2(sensores); break;
-    case 3: accion = ComportamientoTecnicoNivel_3(sensores); break;
+    //case 3: accion = ComportamientoTecnicoNivel_3(sensores); break;
+    case 3: accion = ComportamientoTecnicoNivel_E(sensores); break; 
     case 4: accion = ComportamientoTecnicoNivel_4(sensores); break;
     case 5: accion = ComportamientoTecnicoNivel_5(sensores); break;
     case 6: accion = ComportamientoTecnicoNivel_6(sensores); break;
@@ -32,6 +33,7 @@ Action ComportamientoTecnico::think(Sensores sensores) {
 // Niveles del técnico
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   Action accion = IDLE;
+ 
   ActualizarMapa(sensores);
 
   if(sensores.superficie[0] == 'D'){
@@ -41,6 +43,46 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   if(sensores.superficie[0] == 'U'){
     return IDLE; 
   }
+
+  if (giro45Der>0){
+    giro45Der--;
+    ultima_accion = TURN_SR;
+    return TURN_SR;
+  }
+  else if (giro45Izq>0){
+    giro45Izq--;
+    ultima_accion = TURN_SL;
+    return TURN_SL;
+  }
+
+  if( (sensores.superficie[2] == 'P' or sensores.superficie[2] == 'M' or sensores.superficie[2] == 'B')and ultima_accion != TURN_SR and ultima_accion != TURN_SL){
+     giros++; // veces que se choca una pared que haga el mismo giro de siempre
+    if(giros > 2){
+      giros = 0;
+      ultima_accion = TURN_SR;
+      giro45Der = 3; 
+      return TURN_SR; 
+    }
+  }
+
+  if ( ultima_accion == TURN_SL or ultima_accion == TURN_SR){
+    giros_seguidos++;
+    if ( giros_seguidos > 3){
+      if (ultima_accion == TURN_SL){
+        giro45Izq = 2;
+        ultima_accion = TURN_SL;
+        giros_seguidos = 0;
+        return TURN_SL;
+      }
+      else{
+        giro45Der = 2;
+        ultima_accion = TURN_SR;
+        giros_seguidos = 0;
+        return TURN_SR;
+      }
+    }
+  }
+  else giros_seguidos = 0;
 
   if ( sensores.agentes[2] == 'i' or sensores.agentes[1] == 'i' or sensores.agentes[3] == 'i'){
     ultima_accion = IDLE;
@@ -63,6 +105,18 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   default:
     accion = TURN_SL;
     break;
+  /*default:
+    if(cambio){
+      accion = TURN_SR;
+      giro45Der = 2; // Si se ha detectado un posible bucle, girar a la derecha para intentar salir del bucle
+      cambio = false;
+    }
+    else{
+      accion = TURN_SL;
+      giro45Izq = 2; // Si se ha detectado un posible bucle, girar a la izquierda para intentar salir del bucle
+      cambio = true;
+    }
+    break;*/
   }
 
   ultima_accion = accion;
@@ -80,7 +134,7 @@ int ComportamientoTecnico::VeoCasillaInteresante_0(char i, char c, char d){
   if( c =='U') return 2;
   else if( i == 'U') return 1;
   else if( d == 'U') return 3;
-  if( c == 'C') return 2;
+  else if( c == 'C') return 2;
   else if( i == 'C') return 1;
   else if( d == 'C') return 3;
   else return 0;
@@ -344,7 +398,19 @@ void ComportamientoTecnico::ActualizarExploracion(int posf, int posc, int brujul
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+  if (!hayPlan){
+    // Invocar al método de búsqueda
+    hayPlan = true;
+  }
+  if (hayPlan and plan.size()>0){
+    accion = plan.front();
+    plan.pop_front();
+  }
+  if (plan.size()== 0){
+    hayPlan = false;
+  }
+  return accion;
 }
 
 /**
@@ -353,7 +419,19 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+  if (!hayPlan){
+    // Invocar al método de búsqueda
+    hayPlan = true;
+  }
+  if (hayPlan and plan.size()>0){
+    accion = plan.front();
+    plan.pop_front();
+  }
+  if (plan.size()== 0){
+    hayPlan = false;
+  }
+  return accion;
 }
 
 /**
@@ -388,10 +466,89 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
  * @param sensores Datos actuales de los sensores.
  * @return Acción a realizar.
  */
-Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
-  return IDLE;
+Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores){
+  Action accion = IDLE;
+  if (!hayPlan){
+    // Invocar al método de búsqueda
+    hayPlan = true;
+  }
+  if (hayPlan and plan.size()>0){
+    accion = plan.front();
+    plan.pop_front();
+  }
+  if (plan.size()== 0){
+    hayPlan = false;
+  }
+  return accion;
 }
 
+
+//me he quedado por la pagina 12
+/*
+list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura)
+{
+  NodoT current_node;
+  list<NodoT> frontier;
+  list<NodoT> explored;
+  list<Action> plan;
+
+  current_node.estado = inicio;
+  frontier.push_back(current_node);
+  bool SolutionFound = ( current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c );
+  while ( !frontier.empty() and !SolutionFound )
+  {
+
+    frontier.pop_front();
+    explored.push_back(current_node);
+
+    //comprobamos si estoy en una casilla que da las zapatillas
+    if (terreno[current_node.estado.site.f][current_node.estado.site.c] == 'D'){
+      current_node.estado.zapatillas = true;
+    }
+
+    //generamos los hijos aplicar walk
+    NodoT childWalk = current_node;
+    childWalk.estado = applyT(WALK, current_node.estado, terreno, altura);
+    if (childWalk.estado.site.f != final.site.f and childWalk.estado.site.c != final.site.c){
+      childWalk.secuencia.push_back(WALK);
+      current_node= childWalk;
+      SolutionFound = true;
+    }
+    else if(!Find(childWalk, frontier) and !Find(childWalk, explored)){
+      childWalk.secuencia.push_back(WALK);
+      frontier.push_back(childWalk);
+    }
+
+    if(!SolutionFound){
+      //hijo resultante aplicar giro izquierda
+      NodoT childTurnSR = current_node;
+      childTurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
+      if (!Find(childTurnSR, frontier) and !Find(childTurnSR, explored)){
+        childTurnSR.secuencia.push_back(TURN_SR);
+        frontier.push_back(childTurnSR);
+      }
+
+      //hijo resultante aplicar giro derecha
+      NodoT childTurnSL = current_node;
+      childTurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura
+      if(!Find(childTurnSL, frontier) and !Find(childTurnSL, explored)){
+        childTurnSL.secuencia.push_back(TURN_SL);
+        frontier.push_back(childTurnSL);
+      }
+    }
+
+    if(!SolutionFound and !frontier.empty()){
+      current_node = frontier.front();
+      SolutionFound = ( current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c );
+    }
+
+    if(SolutionFound){
+      plan = current_node.secuencia;
+    }
+  }
+
+  return plan;
+}*/
 
 // =========================================================================
 // FUNCIONES PROPORCIONADAS

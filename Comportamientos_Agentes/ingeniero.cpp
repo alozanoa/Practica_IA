@@ -56,6 +56,46 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   if(sensores.superficie[0] == 'U'){
     return IDLE; 
   }
+  
+  if (giro45Der>0){
+    giro45Der--;
+    ultima_accion = TURN_SR;
+    return TURN_SR;
+  }
+  else if (giro45Izq>0){
+    giro45Izq--;
+    ultima_accion = TURN_SL;
+    return TURN_SL;
+  }
+
+  if( (sensores.superficie[2] == 'P' or sensores.superficie[2] == 'M' or sensores.superficie[2] == 'B')and ultima_accion != TURN_SR and ultima_accion != TURN_SL){
+     giros++; // veces que se choca una pared que haga el mismo giro de siempre
+    if(giros > 2){
+      giros = 0;
+      ultima_accion = TURN_SR;
+      giro45Der = 3; 
+      return TURN_SR; 
+    }
+  }
+
+  if ( ultima_accion == TURN_SL or ultima_accion == TURN_SR){
+    giros_seguidos++;
+    if ( giros_seguidos > 3){
+      if (ultima_accion == TURN_SL){
+        giro45Izq = 2;
+        ultima_accion = TURN_SL;
+        giros_seguidos = 0;
+        return TURN_SL;
+      }
+      else{
+        giro45Der = 2;
+        ultima_accion = TURN_SR;
+        giros_seguidos = 0;
+        return TURN_SR;
+      }
+    }
+  }
+  else giros_seguidos = 0;
 
   char i = ViablePorAltura(sensores.superficie[1], sensores.agentes[1], sensores.cota[1] - sensores.cota[0], tiene_zapatillas);
   char c = ViablePorAltura(sensores.superficie[2], sensores.agentes[2], sensores.cota[2] - sensores.cota[0], tiene_zapatillas);
@@ -73,6 +113,18 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   default:
     accion = TURN_SL;
     break;
+  /*default:
+    if(cambio){
+      accion = TURN_SR;
+      giro45Der =2; // Si se ha detectado un posible bucle, girar a la derecha para intentar salir del bucle
+      cambio = false;
+    }
+    else{
+      accion = TURN_SL;
+      giro45Izq = 2; // Si se ha detectado un posible bucle, girar a la izquierda para intentar salir del bucle
+      cambio = true;
+    }
+    break;*/
   }
 
   ultima_accion = accion;

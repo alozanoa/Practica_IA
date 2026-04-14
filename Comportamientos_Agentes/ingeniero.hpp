@@ -30,6 +30,7 @@ public:
     mapaExplorado = std::vector<std::vector<unsigned char>>(size, std::vector<unsigned char>(size, 0));
     bucle = false;
     giros = 0;
+    giros_seguidos = 0;
   }
 
   /**
@@ -209,7 +210,7 @@ private:
   std::vector<std::vector<unsigned char>> mapaExplorado; // hacia donde se ha movido el agente
   int giros; // Contador de giros para detectar bucles
   bool bucle; // Indica si el agente está actualmente en un bucle
-
+  int giros_seguidos; // Para detectar bucles de giro en el nivel 0
 };
 
 #endif

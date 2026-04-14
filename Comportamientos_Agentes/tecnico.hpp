@@ -41,6 +41,9 @@ public:
     mapaExplorado = std::vector<std::vector<unsigned char>>(size, std::vector<unsigned char>(size, 0));
     bucle = false;
     giros = 0;
+    giros_seguidos = 0;
+    
+
   }
 
   /**
@@ -52,6 +55,10 @@ public:
                        std::vector<std::vector<unsigned char>> mapaC): 
                        Comportamiento(mapaR, mapaC) {
     // Inicializar Variables de Estado
+
+    // Nivel E
+    hayPlan = false;
+    tiene_zapatillas = false;
 
   }
 
@@ -202,12 +209,19 @@ protected:
   // FUNCIONES CREADAS POR EL ALUMNO
   // =========================================================================
 
+  //nivel 0
   int VeoCasillaInteresante_0(char i, char c, char d);
+  char ViablePorAltura(char casilla, int dif ); 
+
+  //nivel 1
   int VeoCasillaInteresante_1(char i, char c, char d);
-  char ViablePorAltura(char casilla, int dif );
   char ViablePorAltura_1(char casilla, int dif,  int vecesExplorada);
   int vecesVistas(int posf, int posc, Orientacion brujula);
   void ActualizarExploracion(int posf, int posc, int brujula);
+
+
+  //nivel E
+  //list<Action> Busqueda_A(const EstadoT &inicio, const EstadoT &objetivo,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
 
 
 private:
@@ -222,6 +236,27 @@ private:
   std::vector<std::vector<unsigned char>> mapaExplorado; // hacia donde se ha movido el agente
   bool bucle;
   int giros;
+  int giros_seguidos; // Para detectar bucles de giro en el nivel 0
+
+  //Nivel E
+  bool hayPlan;
+  list<Action> plan;
 };
+/*
+struct EstadoT {
+ ubicacion site;
+ bool zapatillas;
+ bool operator==(const EstadoT &st) const{
+ return site == st.site and zapatillas == st.zapatillas;
+ }
+};
+
+struct NodoT{
+ EstadoT estado;
+ list<Action> secuencia;
+ bool operator==(const NodoT &node) const{
+ return estado == node.estado;
+ }
+};*/
 
 #endif
