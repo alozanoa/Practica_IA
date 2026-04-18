@@ -41,8 +41,9 @@ public:
     mapaExplorado = std::vector<std::vector<unsigned char>>(size, std::vector<unsigned char>(size, 0));
     bucle = false;
     giros = 0;
+    giros_choque = 0;
     giros_seguidos = 0;
-    
+    cambio = false;
 
   }
 
@@ -236,7 +237,9 @@ private:
   std::vector<std::vector<unsigned char>> mapaExplorado; // hacia donde se ha movido el agente
   bool bucle;
   int giros;
+  int giros_choque; // Contador de giros seguidos tras chocar contra un muro o precipicio
   int giros_seguidos; // Para detectar bucles de giro en el nivel 0
+  bool cambio; // Para alternar entre giro a la derecha e izquierda al detectar un posible bucle
 
   //Nivel E
   bool hayPlan;

@@ -28,9 +28,13 @@ public:
     giro45Izq = 0;
     tam_size = (size == 0) ? 100 : size; // Si no se proporciona tamaño, usar 100x100 por defecto
     mapaExplorado = std::vector<std::vector<unsigned char>>(size, std::vector<unsigned char>(size, 0));
+    ultimospasoX = 0;
+    ultimospasoY = 0;
     bucle = false;
     giros = 0;
+    giros_choque = 0;
     giros_seguidos = 0;
+    cambio = false;
   }
 
   /**
@@ -208,9 +212,14 @@ private:
   int giro45Izq;
   int tam_size; // Tamaño del mapa explorado
   std::vector<std::vector<unsigned char>> mapaExplorado; // hacia donde se ha movido el agente
+  int ultimospasoX; // Para detectar si se está dando vueltas en el mismo sitio
+  int ultimospasoY;
   int giros; // Contador de giros para detectar bucles
+  int giros_choque; // Contador de giros seguidos tras chocar contra un muro o precipicio
   bool bucle; // Indica si el agente está actualmente en un bucle
   int giros_seguidos; // Para detectar bucles de giro en el nivel 0
+  bool cambio; // Para alternar entre giro a la derecha e izquierda al detectar un posible bucle
+
 };
 
 #endif

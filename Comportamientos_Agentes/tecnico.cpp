@@ -33,7 +33,6 @@ Action ComportamientoTecnico::think(Sensores sensores) {
 // Niveles del técnico
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   Action accion = IDLE;
- 
   ActualizarMapa(sensores);
 
   if(sensores.superficie[0] == 'D'){
@@ -41,8 +40,13 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   }
 
   if(sensores.superficie[0] == 'U'){
-    return IDLE; 
+    if (sensores.superficie[2] == 'U') return WALK;
+    else if (sensores.superficie[1] == 'U') return TURN_SL;
+    else if (sensores.superficie[3] == 'U') return TURN_SR;
+    else return IDLE; 
   }
+
+  mapaExplorado[sensores.posF][sensores.posC] ++; // Marcar la posición actual como explorada
 
   if (giro45Der>0){
     giro45Der--;
@@ -55,38 +59,30 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
     return TURN_SL;
   }
 
-  if( (sensores.superficie[2] == 'P' or sensores.superficie[2] == 'M' or sensores.superficie[2] == 'B')and ultima_accion != TURN_SR and ultima_accion != TURN_SL){
-     giros++; // veces que se choca una pared que haga el mismo giro de siempre
-    if(giros > 2){
-      giros = 0;
+  if (giros > 4 ){ // Si se han dado muchos giros seguidos sin avanzar, es posible que estemos en un bucle
+    giros = 0;
+    cambio = !cambio;
+  }
+
+ if ( giros_seguidos > 3){
+    if (ultima_accion == TURN_SL){
+      giro45Izq = 1;
+      ultima_accion = TURN_SL;
+      giros_seguidos = 0;
+      return TURN_SL;
+    }
+    else{
+      giro45Der = 1;
       ultima_accion = TURN_SR;
-      giro45Der = 3; 
-      return TURN_SR; 
+      giros_seguidos = 0;
+      return TURN_SR;
     }
   }
 
-  if ( ultima_accion == TURN_SL or ultima_accion == TURN_SR){
-    giros_seguidos++;
-    if ( giros_seguidos > 3){
-      if (ultima_accion == TURN_SL){
-        giro45Izq = 2;
-        ultima_accion = TURN_SL;
-        giros_seguidos = 0;
-        return TURN_SL;
-      }
-      else{
-        giro45Der = 2;
-        ultima_accion = TURN_SR;
-        giros_seguidos = 0;
-        return TURN_SR;
-      }
-    }
-  }
-  else giros_seguidos = 0;
 
   if ( sensores.agentes[2] == 'i' or sensores.agentes[1] == 'i' or sensores.agentes[3] == 'i'){
-    ultima_accion = IDLE;
-    return IDLE;
+    ultima_accion = TURN_SL;
+    return TURN_SL;
   }
   
   char i = ViablePorAltura(sensores.superficie[1], sensores.cota[1] - sensores.cota[0]);
@@ -94,6 +90,64 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   char d = ViablePorAltura(sensores.superficie[3], sensores.cota[3] - sensores.cota[0]);
 
   int pos = VeoCasillaInteresante_0(i, c, d);
+
+  int posx = sensores.posF;
+  int posy = sensores.posC;
+
+  int x_frente = posx, y_frente = posy;
+  int x_izq = posx, y_izq = posy;
+  int x_der = posx, y_der = posy;
+
+  if (sensores.rumbo == norte) x_frente--;
+  else if(sensores.rumbo == noreste){ x_frente--; y_frente++; }
+  else if(sensores.rumbo == este) y_frente++;
+  else if(sensores.rumbo == sureste){ x_frente++; y_frente++; }
+  else if(sensores.rumbo == sur) x_frente++;
+  else if(sensores.rumbo == suroeste){ x_frente++; y_frente--; }
+  else if(sensores.rumbo == oeste) y_frente--; 
+  else if(sensores.rumbo == noroeste){ x_frente--; y_frente--; }
+
+  // IZQUIERDA (aproximación: girar mentalmente)
+  if (sensores.rumbo == norte){x_izq--; y_izq--;}
+  else if(sensores.rumbo == noreste) x_izq--; 
+  else if(sensores.rumbo == este) {x_izq--; y_izq++;} 
+  else if(sensores.rumbo == sureste){ y_izq++; }
+  else if(sensores.rumbo == sur){ x_izq++; y_izq++; }
+  else if(sensores.rumbo == suroeste){  x_izq++; }
+  else if(sensores.rumbo == oeste){ x_izq++; y_izq--; }
+  else if(sensores.rumbo == noroeste){  y_izq--; }
+
+  // DERECHA
+  if (sensores.rumbo == norte){x_der--; y_der++;}
+  else if(sensores.rumbo == noreste) y_der++; 
+  else if(sensores.rumbo == este) {x_der++; y_der++;} 
+  else if(sensores.rumbo == sureste){ x_der++; }
+  else if(sensores.rumbo == sur){ x_der++; y_der--; }
+  else if(sensores.rumbo == suroeste){  y_der--; }
+  else if(sensores.rumbo == oeste){ x_der--; y_der--; }
+  else if(sensores.rumbo == noroeste){  x_der--; }
+
+  // visitas
+  int v_frente = mapaExplorado[x_frente][y_frente];
+  int v_izq    = mapaExplorado[x_izq][y_izq];
+  int v_der    = mapaExplorado[x_der][y_der];
+
+  const int PENAL = 3;
+  if(v_frente > 2) v_frente += PENAL;
+  if(v_izq > 2)    v_izq    += PENAL;
+  if(v_der > 2)    v_der    += PENAL;
+
+  if (pos == 2){ // SOLO corregir frente
+    if(es_camino(i) and es_camino(d)) {
+      if(v_izq < v_der and v_izq < v_frente) pos = 1;
+      else if(v_der < v_izq and v_der < v_frente) pos = 3;
+    }
+    else if(es_camino(i) and v_izq < v_frente) pos = 1;
+    else if(es_camino(d) and v_der < v_frente ) pos = 3;
+  }
+  else if(pos == 1 and es_camino(d) and v_der < v_izq) pos = 3;
+  else if(pos == 3 and es_camino(i) and v_izq < v_der) pos = 1;
+
   switch (pos)
   {
   case 3:
@@ -101,22 +155,20 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
     break;
   case 2:
     accion = WALK;
+    giros_seguidos = 0;
     break;
-  default:
+  case 1:
     accion = TURN_SL;
     break;
-  /*default:
-    if(cambio){
-      accion = TURN_SR;
-      giro45Der = 2; // Si se ha detectado un posible bucle, girar a la derecha para intentar salir del bucle
-      cambio = false;
-    }
-    else{
-      accion = TURN_SL;
-      giro45Izq = 2; // Si se ha detectado un posible bucle, girar a la izquierda para intentar salir del bucle
-      cambio = true;
-    }
-    break;*/
+  default:
+    if(cambio) accion = TURN_SR;
+    else accion = TURN_SL;
+    break;
+  }
+
+  if (accion == TURN_SL or accion == TURN_SR) {
+      giros_seguidos++;
+      giros++;
   }
 
   ultima_accion = accion;
@@ -137,6 +189,9 @@ int ComportamientoTecnico::VeoCasillaInteresante_0(char i, char c, char d){
   else if( c == 'C') return 2;
   else if( i == 'C') return 1;
   else if( d == 'C') return 3;
+  else if( c == 'D') return 2;
+  else if( i == 'D') return 1;
+  else if( d == 'D') return 3;
   else return 0;
 }
 
