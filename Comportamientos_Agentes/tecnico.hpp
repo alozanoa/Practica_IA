@@ -19,6 +19,30 @@
  * El técnico colabora con el ingeniero para resolver el problema de instalación de tuberías
  */
 
+ struct EstadoT {
+ ubicacion site;
+ bool zapatillas;
+ bool operator==(const EstadoT &st) const{
+ return site == st.site and zapatillas == st.zapatillas;
+ }
+};
+
+struct NodoT{
+ EstadoT estado;
+ list<Action> secuencia;
+
+  bool operator==(const NodoT &node) const{
+    return estado == node.estado;
+  }
+
+  bool operator<(const NodoT &node) const{
+    if (estado.site.f < node.estado.site.f) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c < node.estado.site.c) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and estado.site.brujula < node.estado.site.brujula) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and estado.site.brujula == node.estado.site.brujula and estado.zapatillas < node.estado.zapatillas) return true;
+    else return false;
+  }
+};
 
 
 class ComportamientoTecnico : public Comportamiento {
@@ -224,8 +248,11 @@ protected:
 
 
   //nivel E
-  //list<Action> Busqueda_A(const EstadoT &inicio, const EstadoT &objetivo,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
-
+  list<Action> Busqueda_Anchura(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
+  bool CasillaAccesibleT(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
+  EstadoT NextCasillaT(const EstadoT &st);
+  EstadoT applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
+  bool Find (const NodoT & st, const list<NodoT> &lista);
 
 private:
   // =========================================================================
@@ -247,21 +274,5 @@ private:
   bool hayPlan;
   list<Action> plan;
 };
-/*
-struct EstadoT {
- ubicacion site;
- bool zapatillas;
- bool operator==(const EstadoT &st) const{
- return site == st.site and zapatillas == st.zapatillas;
- }
-};
-
-struct NodoT{
- EstadoT estado;
- list<Action> secuencia;
- bool operator==(const NodoT &node) const{
- return estado == node.estado;
- }
-};*/
 
 #endif

@@ -475,8 +475,194 @@ void ComportamientoIngeniero::ActualizarExploracion(int posf, int posc, int bruj
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_2(Sensores sensores)
 {
-  // TODO: Implementar búsqueda para el Nivel 2.
-  return IDLE;
+  Action accion = IDLE;
+  if (!hayPlan){
+    // Invocar al método de búsqueda
+    EstadoI inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+    plan = Busqueda_Anchura(inicio, fin, mapaResultado, mapaCotas, sensores);
+    VisualizaPlan(inicio.site,plan);
+    hayPlan = plan.size() != 0 ;
+  }
+  if (hayPlan and plan.size()>0){
+    accion = plan.front();
+    plan.pop_front();
+  }
+  if (plan.size()== 0){
+    hayPlan = false;
+  }
+  return accion;
+}
+
+list<Action> ComportamientoIngeniero::Busqueda_Anchura(const EstadoI &inicio, const EstadoI &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores)
+{
+  NodoI current_node;
+  list<NodoI> frontier;
+  set<NodoI> explored;
+  list<Action> plan;
+
+  current_node.estado = inicio;
+  frontier.push_back(current_node);
+  bool SolutionFound = ( current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c );
+  while ( !frontier.empty() and !SolutionFound ){
+    frontier.pop_front();
+    explored.insert(current_node);
+
+    //comprobamos si estoy en una casilla que da las zapatillas
+    if (terreno[current_node.estado.site.f][current_node.estado.site.c] == 'D'){
+      current_node.estado.zapatillas = true;
+    }
+
+
+    NodoI childjump = current_node;
+    childjump.estado = applyI(JUMP, current_node.estado, terreno, altura,sensores);
+    if (childjump.estado.site.f == final.site.f and childjump.estado.site.c == final.site.c){
+      childjump.secuencia.push_back(JUMP);
+      current_node= childjump;
+      SolutionFound = true;
+    }
+    if(explored.find(childjump) == explored.end()){
+      childjump.secuencia.push_back(JUMP);
+      frontier.push_back(childjump);
+    }
+
+    if(!SolutionFound){
+      //generamos los hijos aplicar walk
+      NodoI childWalk = current_node;
+      childWalk.estado = applyI(WALK, current_node.estado, terreno, altura,sensores);
+      if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
+        childWalk.secuencia.push_back(WALK);
+        current_node= childWalk;
+        SolutionFound = true;
+      }
+      if(explored.find(childWalk) == explored.end()){
+        childWalk.secuencia.push_back(WALK);
+        frontier.push_back(childWalk);
+      }
+    }
+
+    if(!SolutionFound){
+      //hijo resultante aplicar giro izquierda
+      NodoI childTurnSR = current_node;
+      childTurnSR.estado = applyI(TURN_SR, current_node.estado, terreno, altura, sensores);
+      if (explored.find(childTurnSR) == explored.end()){
+        childTurnSR.secuencia.push_back(TURN_SR);
+        frontier.push_back(childTurnSR);
+      }
+
+      //hijo resultante aplicar giro derecha
+      NodoI childTurnSL = current_node;
+      childTurnSL.estado = applyI(TURN_SL, current_node.estado, terreno, altura, sensores);
+      if(explored.find(childTurnSL) == explored.end()){
+        childTurnSL.secuencia.push_back(TURN_SL);
+        frontier.push_back(childTurnSL);
+      }
+    }
+
+    if(!SolutionFound and !frontier.empty()){
+      current_node = frontier.front();
+       while (explored.find(current_node) != explored.end() and !frontier.empty()){
+        frontier.pop_front();
+        current_node = frontier.front();
+       } 
+    }
+
+    if(SolutionFound){
+      plan = current_node.secuencia;
+    }
+  }
+
+  return plan;
+}
+
+bool ComportamientoIngeniero::Find (const NodoI & st, const list<NodoI> &lista){
+  auto it = lista.begin();
+  while (it != lista.end() and !((*it) == st)){
+    it++;
+  }
+  return (it != lista.end());
+
+}
+
+EstadoI ComportamientoIngeniero::applyI(Action accion, const EstadoI & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores){
+  EstadoI next = st;
+  switch(accion){
+    case WALK:
+      if (CasillaAccesible(st,terreno,altura,1,sensores)){
+         next = NextCasilla(st, 1);
+      }
+      break;
+    case JUMP:
+      if (CasillaAccesible(st,terreno,altura,2,sensores)){
+         next = NextCasilla(st, 2);
+      }
+      break;
+    case TURN_SR:
+      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
+      break;
+    case TURN_SL:
+      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
+      break;
+  }
+  return next;
+}
+
+bool ComportamientoIngeniero::CasillaAccesible(const EstadoI &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, int a, Sensores sensores){
+  EstadoI next = NextCasilla(st, a);
+  bool check1 = false, check2 = false, check3 = false;
+  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M' and terreno[next.site.f][next.site.c] != 'B';
+  check2 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1 or (st.zapatillas and abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 2);
+  if(a==2) {
+    EstadoI medio = NextCasilla(st, 1);
+    check3 = terreno[medio.site.f][medio.site.c] != 'M' and terreno[medio.site.f][medio.site.c] != 'P' and terreno[medio.site.f][medio.site.c] != 'B' and sensores.agentes[2] != 't';
+    return check1 and check2 and check3;
+  }
+  return check1 and check2;
+}
+
+/*
+ * @brief Devuelve la posición (fila, columna) de la casilla que hay delante del agente.
+ * @param st Estado actual del agente (fila, columna, orientacion).
+ * @param a Distancia a avanzar.
+ * @return Estado con la fila y columna de la casilla de enfrente.
+ */
+EstadoI ComportamientoIngeniero::NextCasilla(const EstadoI &st, int a){
+  EstadoI siguiente = st;
+  switch (st.site.brujula){
+    case norte:
+      siguiente.site.f = st.site.f - a;
+      break;
+    case noreste:
+      siguiente.site.f = st.site.f - a;
+      siguiente.site.c = st.site.c + a;
+      break;
+    case este:
+      siguiente.site.c = st.site.c + a;
+      break;
+    case sureste:
+      siguiente.site.f = st.site.f + a;
+      siguiente.site.c = st.site.c + a;
+      break;
+    case sur:
+      siguiente.site.f = st.site.f + a;
+      break;
+    case suroeste:
+      siguiente.site.f = st.site.f + a;
+      siguiente.site.c = st.site.c - a;
+      break;
+    case oeste:
+      siguiente.site.c = st.site.c - a;
+      break;
+    case noroeste:
+      siguiente.site.f = st.site.f - a;
+      siguiente.site.c = st.site.c - a;
+  }
+  return siguiente;
 }
 
 /**

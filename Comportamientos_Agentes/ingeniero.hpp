@@ -10,6 +10,32 @@
 
 #include "comportamientos/comportamiento.hpp"
 
+struct EstadoI {
+ ubicacion site;
+ bool zapatillas;
+ bool operator==(const EstadoI &st) const{
+ return site == st.site and zapatillas == st.zapatillas;
+ }
+};
+
+struct NodoI{
+ EstadoI estado;
+ list<Action> secuencia;
+
+  bool operator==(const NodoI &node) const{
+    return estado == node.estado;
+  }
+
+  bool operator<(const NodoI &node) const{
+    if (estado.site.f < node.estado.site.f) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c < node.estado.site.c) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and estado.site.brujula < node.estado.site.brujula) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and estado.site.brujula == node.estado.site.brujula and estado.zapatillas < node.estado.zapatillas) return true;
+    else return false;
+  }
+};
+
+
 class ComportamientoIngeniero : public Comportamiento {
 public:
   // =========================================================================
@@ -45,7 +71,10 @@ public:
   ComportamientoIngeniero(std::vector<std::vector<unsigned char>> mapaR, 
                          std::vector<std::vector<unsigned char>> mapaC): 
                          Comportamiento(mapaR, mapaC) {
-    // Inicializar Variables de Estado
+    
+                          
+    hayPlan = false;
+    tiene_zapatillas = false;
   }
 
   ComportamientoIngeniero(const ComportamientoIngeniero &comport)
@@ -202,6 +231,12 @@ protected:
   bool es_transitable(unsigned char c, bool zap) ;
   void MarcarCasillasVisibles(Sensores sensores);
 
+  // niveles 2, 3, 4 y 5
+  list<Action> Busqueda_Anchura(const EstadoI &inicio, const EstadoI &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
+  bool CasillaAccesible(const EstadoI &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, int a, Sensores sensores);
+  EstadoI NextCasilla(const EstadoI &st, int a);
+  EstadoI applyI(Action accion, const EstadoI & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
+  bool Find (const NodoI & st, const list<NodoI> &lista);
 private:
   // =========================================================================
   // VARIABLES DE ESTADO (PUEDEN SER EXTENDIDAS POR EL ALUMNO)
@@ -222,6 +257,10 @@ private:
   int giros_seguidos; // Para detectar bucles de giro en el nivel 0
   bool cambio; // Para alternar entre giro a la derecha e izquierda al detectar un posible bucle
 
+
+  //nivel 2
+  bool hayPlan; // Indica si actualmente se dispone de un plan de acciones a seguir
+  list<Action> plan; // Lista de acciones resultante del proceso de búsqueda
 };
 
 #endif

@@ -19,8 +19,8 @@ Action ComportamientoTecnico::think(Sensores sensores) {
     case 0: accion = ComportamientoTecnicoNivel_0(sensores); break;
     case 1: accion = ComportamientoTecnicoNivel_1(sensores); break;
     case 2: accion = ComportamientoTecnicoNivel_2(sensores); break;
-    //case 3: accion = ComportamientoTecnicoNivel_3(sensores); break;
-    case 3: accion = ComportamientoTecnicoNivel_E(sensores); break; 
+    //case 3: accion = ComportamientoTecnicoNivel_E(sensores); break;
+    case 3: accion = ComportamientoTecnicoNivel_3(sensores); break; 
     case 4: accion = ComportamientoTecnicoNivel_4(sensores); break;
     case 5: accion = ComportamientoTecnicoNivel_5(sensores); break;
     case 6: accion = ComportamientoTecnicoNivel_6(sensores); break;
@@ -174,32 +174,11 @@ char ComportamientoTecnico::ViablePorAltura(char casilla, int dif){
   else return 'P';
 }
 
-void ComportamientoTecnico::MarcarCasillasVisibles(Sensores sensores) {
-    int f = sensores.posF;
-    int c = sensores.posC;
-    int maxF = mapaExplorado.size();
-    int maxC = mapaExplorado[0].size();
-
-    // Casilla actual
-    mapaExplorado[f][c]++;
-
-    // Las 8 casillas adyacentes
-    for (int df = -1; df <= 1; df++) {
-        for (int dc = -1; dc <= 1; dc++) {
-            if (df == 0 && dc == 0) continue; // ya marcada arriba
-            int nf = f + df;
-            int nc = c + dc;
-            if (nf >= 0 && nf < maxF && nc >= 0 && nc < maxC) {
-                mapaExplorado[nf][nc]++;
-            }
-        }
-    }
-}
 
 /**
  * @brief Comprueba si una celda es de tipo camino transitable.
  * @param c Carácter que representa el tipo de superficie.
- * @return true si es camino ('C'), zapatillas ('D') o meta ('U').
+ * @return true si es camino ('C') o meta ('U').
  */
 bool ComportamientoTecnico::es_transitable(unsigned char c) const {
   return (c == 'C' ||  c == 'U');
@@ -443,6 +422,13 @@ void ComportamientoTecnico::ActualizarExploracion(int posf, int posc, int brujul
 }
 
 
+bool veoIngeniero(Sensores sensores){
+  for(int i = 0; i < 16; i++){
+    if(sensores.agentes[i] == 'i') return true;
+  }
+  return false;
+}
+
 /**
  * @brief Comportamiento del técnico para el Nivel 2.
  * @param sensores Datos actuales de los sensores.
@@ -450,17 +436,7 @@ void ComportamientoTecnico::ActualizarExploracion(int posf, int posc, int brujul
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
   Action accion = IDLE;
-  if (!hayPlan){
-    // Invocar al método de búsqueda
-    hayPlan = true;
-  }
-  if (hayPlan and plan.size()>0){
-    accion = plan.front();
-    plan.pop_front();
-  }
-  if (plan.size()== 0){
-    hayPlan = false;
-  }
+
   return accion;
 }
 
@@ -521,7 +497,16 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores){
   Action accion = IDLE;
   if (!hayPlan){
     // Invocar al método de búsqueda
-    hayPlan = true;
+    EstadoT inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+    plan = Busqueda_Anchura(inicio, fin, mapaResultado, mapaCotas);
+    VisualizaPlan(inicio.site,plan);
+    hayPlan = plan.size() != 0 ;
   }
   if (hayPlan and plan.size()>0){
     accion = plan.front();
@@ -535,8 +520,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores){
 
 
 //me he quedado por la pagina 12
-/*
-list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura)
+
+list<Action> ComportamientoTecnico::Busqueda_Anchura(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura)
 {
   NodoT current_node;
   list<NodoT> frontier;
@@ -546,9 +531,7 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
   current_node.estado = inicio;
   frontier.push_back(current_node);
   bool SolutionFound = ( current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c );
-  while ( !frontier.empty() and !SolutionFound )
-  {
-
+  while ( !frontier.empty() and !SolutionFound ){
     frontier.pop_front();
     explored.push_back(current_node);
 
@@ -560,11 +543,12 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
     //generamos los hijos aplicar walk
     NodoT childWalk = current_node;
     childWalk.estado = applyT(WALK, current_node.estado, terreno, altura);
-    if (childWalk.estado.site.f != final.site.f and childWalk.estado.site.c != final.site.c){
+    if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
       childWalk.secuencia.push_back(WALK);
       current_node= childWalk;
       SolutionFound = true;
     }
+
     else if(!Find(childWalk, frontier) and !Find(childWalk, explored)){
       childWalk.secuencia.push_back(WALK);
       frontier.push_back(childWalk);
@@ -581,7 +565,7 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
 
       //hijo resultante aplicar giro derecha
       NodoT childTurnSL = current_node;
-      childTurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura
+      childTurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
       if(!Find(childTurnSL, frontier) and !Find(childTurnSL, explored)){
         childTurnSL.secuencia.push_back(TURN_SL);
         frontier.push_back(childTurnSL);
@@ -599,7 +583,78 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
   }
 
   return plan;
-}*/
+}
+
+bool ComportamientoTecnico::Find (const NodoT & st, const list<NodoT> &lista){
+  auto it = lista.begin();
+  while (it != lista.end() and !((*it) == st)){
+    it++;
+  }
+  return (it != lista.end());
+}
+
+EstadoT ComportamientoTecnico::applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura){
+  EstadoT next = st;
+  switch(accion){
+    case WALK:
+      if (CasillaAccesibleT(st,terreno,altura)){
+         next = NextCasillaT(st);
+      }
+      break;
+    case TURN_SR:
+      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
+      break;
+    case TURN_SL:
+      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
+      break;
+  }
+  return next;
+}
+
+
+bool ComportamientoTecnico::CasillaAccesibleT(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const
+  vector<vector<unsigned char>> &altura){
+  EstadoT next = NextCasillaT(st);
+  bool check1 = false, check2 = false, check3 = false;
+  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M';
+  check2 = terreno[next.site.f][next.site.c] != 'B' or (terreno[next.site.f][next.site.c] == 'B' and st.zapatillas);
+  check3 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1;
+  return check1 and check2 and check3;
+}
+
+EstadoT ComportamientoTecnico::NextCasillaT(const EstadoT &st){
+  EstadoT siguiente = st;
+  switch (st.site.brujula){
+    case norte:
+      siguiente.site.f = st.site.f - 1;
+      break;
+    case noreste:
+      siguiente.site.f = st.site.f - 1;
+      siguiente.site.c = st.site.c + 1;
+      break;
+    case este:
+      siguiente.site.c = st.site.c + 1;
+      break;
+    case sureste:
+      siguiente.site.f = st.site.f + 1;
+      siguiente.site.c = st.site.c + 1;
+      break;
+    case sur:
+      siguiente.site.f = st.site.f + 1;
+      break;
+    case suroeste:
+      siguiente.site.f = st.site.f + 1;
+      siguiente.site.c = st.site.c - 1;
+      break;
+    case oeste:
+      siguiente.site.c = st.site.c - 1;
+      break;
+    case noroeste:
+      siguiente.site.f = st.site.f - 1;
+      siguiente.site.c = st.site.c - 1;
+  }
+  return siguiente;
+}
 
 // =========================================================================
 // FUNCIONES PROPORCIONADAS
