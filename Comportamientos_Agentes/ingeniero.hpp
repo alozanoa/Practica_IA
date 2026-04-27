@@ -199,6 +199,8 @@ protected:
   char ViablePorAltura_1(char casilla,char agente, int dif, bool zap, int vecesExplorada);
   void ActualizarExploracion(int posf, int posc, int brujula);
   int vecesVistas(int posf, int posc, Orientacion brujula);
+  bool es_transitable(unsigned char c, bool zap) ;
+  void MarcarCasillasVisibles(Sensores sensores);
 
 private:
   // =========================================================================

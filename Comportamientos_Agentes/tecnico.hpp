@@ -211,7 +211,7 @@ protected:
   // =========================================================================
 
   //nivel 0
-  int VeoCasillaInteresante_0(char i, char c, char d);
+  int VeoCasillaInteresante_0(char i, char c, char d, bool zap);
   char ViablePorAltura(char casilla, int dif ); 
 
   //nivel 1
@@ -219,6 +219,8 @@ protected:
   char ViablePorAltura_1(char casilla, int dif,  int vecesExplorada);
   int vecesVistas(int posf, int posc, Orientacion brujula);
   void ActualizarExploracion(int posf, int posc, int brujula);
+  bool es_transitable(unsigned char c) const;
+  void MarcarCasillasVisibles(Sensores sensores);
 
 
   //nivel E

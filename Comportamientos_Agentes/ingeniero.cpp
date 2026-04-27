@@ -54,45 +54,18 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   }
 
   if(sensores.superficie[0] == 'U'){
-    if (sensores.superficie[2] == 'U') return WALK;
-    else if (sensores.superficie[1] == 'U') return TURN_SL;
-    else if (sensores.superficie[3] == 'U') return TURN_SR;
-    else return IDLE; 
+    return IDLE; 
   }
 
-  mapaExplorado[sensores.posF][sensores.posC] ++; // Marcar la posición actual como explorada
+  if (ultima_accion == TURN_SL or ultima_accion == TURN_SR)  giros++;
+  else giros = 0;
 
-  if (giro45Der>0){
-    giro45Der--;
-    ultima_accion = TURN_SR;
-    return TURN_SR;
-  }
-  else if (giro45Izq>0){
-    giro45Izq--;
-    ultima_accion = TURN_SL;
-    return TURN_SL;
-  }
+  mapaExplorado[sensores.posF][sensores.posC] += 1; // Marcar la posición actual como explorada
 
-  if (giros > 4 ){ // Si se han dado muchos giros seguidos sin avanzar, es posible que estemos en un bucle
+  if (giros > 4){ // Si se han dado muchos giros seguidos sin avanzar, es posible que estemos en un bucle
     giros = 0;
     cambio = !cambio;
   }
-
- if ( giros_seguidos > 3){
-    if (ultima_accion == TURN_SL){
-      giro45Izq = 1;
-      ultima_accion = TURN_SL;
-      giros_seguidos = 0;
-      return TURN_SL;
-    }
-    else{
-      giro45Der = 1;
-      ultima_accion = TURN_SR;
-      giros_seguidos = 0;
-      return TURN_SR;
-    }
-  }
-
 
   char i = ViablePorAltura(sensores.superficie[1], sensores.agentes[1], sensores.cota[1] - sensores.cota[0], tiene_zapatillas);
   char c = ViablePorAltura(sensores.superficie[2], sensores.agentes[2], sensores.cota[2] - sensores.cota[0], tiene_zapatillas);
@@ -138,24 +111,23 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
 
   // visitas
   int v_frente = mapaExplorado[x_frente][y_frente];
-  int v_izq    = mapaExplorado[x_izq][y_izq] +1;
-  int v_der    = mapaExplorado[x_der][y_der] +1;
+  int v_izq    = mapaExplorado[x_izq][y_izq];
+  int v_der    = mapaExplorado[x_der][y_der];
 
-  const int PENAL = 3;
-  if(v_frente > 2) v_frente += PENAL;
-  if(v_izq > 2)    v_izq    += PENAL;
-  if(v_der > 2)    v_der    += PENAL;
-
-  if (pos == 2 ){ // SOLO corregir frente
-    if(es_camino(i) and es_camino(d)) {
-      if(v_izq < v_der and v_izq  < v_frente) pos = 1;
-      else if(v_der < v_izq and v_der  < v_frente) pos = 3;
-    }
-    else if(es_camino(i) and v_izq < v_frente) pos = 1;
-    else if(es_camino(d) and v_der < v_frente ) pos = 3;
+  if (pos != 0){
+    if(pos == 2 && es_transitable(i, tiene_zapatillas) && v_izq < v_frente)
+      pos = 1;
+    else if(pos == 2 && es_transitable(d, tiene_zapatillas) && v_der < v_frente)
+      pos = 3;
+    else if(pos == 1 && es_transitable(c, tiene_zapatillas ) && v_frente < v_izq)
+      pos = 2;
+    else if(pos == 1 && es_transitable(d, tiene_zapatillas) && v_der < v_izq)
+      pos = 3;
+    else if(pos == 3 && es_transitable(c, tiene_zapatillas) && v_frente < v_der)
+      pos = 2;
+    else if(pos == 3 && es_transitable(i, tiene_zapatillas) && v_izq < v_der)
+      pos = 1;
   }
-  else if(pos == 1 and es_camino(d) and v_der < v_izq) pos = 3;
-  else if(pos == 3 and es_camino(i) and v_izq < v_der) pos = 1;
 
   switch (pos)
   {
@@ -164,7 +136,6 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
     break;
   case 2:
     accion = WALK;
-    giros_seguidos = 0;
     break;
   case 1:
     accion = TURN_SL;
@@ -175,14 +146,10 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
     break;
   }
 
-  if (accion == TURN_SL or accion == TURN_SR) {
-      giros_seguidos++;
-      giros++;
-  }
-
   ultima_accion = accion;
   return accion;
 }
+
 
 
 /**
@@ -204,10 +171,40 @@ int ComportamientoIngeniero::VeoCasillaInteresante_0(char i, char c, char d, boo
   if( c == 'C') return 2;
   else if( i == 'C') return 1;
   else if( d == 'C') return 3;
+
   else return 0;
 }
 
+void ComportamientoIngeniero::MarcarCasillasVisibles(Sensores sensores) {
+    int f = sensores.posF;
+    int c = sensores.posC;
+    int maxF = mapaExplorado.size();
+    int maxC = mapaExplorado[0].size();
 
+    // Casilla actual
+    mapaExplorado[f][c]++;
+
+    // Las 8 casillas adyacentes
+    for (int df = -1; df <= 1; df++) {
+        for (int dc = -1; dc <= 1; dc++) {
+            if (df == 0 && dc == 0) continue; // ya marcada arriba
+            int nf = f + df;
+            int nc = c + dc;
+            if (nf >= 0 && nf < maxF && nc >= 0 && nc < maxC) {
+                mapaExplorado[nf][nc]++;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Comprueba si una celda es de tipo camino transitable.
+ * @param c Carácter que representa el tipo de superficie.
+ * @return true si es camino ('C'), zapatillas ('D') o meta ('U').
+ */
+bool ComportamientoIngeniero::es_transitable(unsigned char c, bool zap)  {
+  return (c == 'C' || (c == 'D' && !zap) || c == 'U');
+}
 
 
 /**
