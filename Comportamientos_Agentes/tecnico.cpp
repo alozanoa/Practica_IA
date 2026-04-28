@@ -491,35 +491,35 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
       current_node.estado.zapatillas = true;
     }
 
-    NodoT childjump = current_node;
-    childjump.estado = applyA(JUMP, current_node.estado, terreno, altura,sensores);
-    childjump.coste_acumulado += coste(current_node.estado, JUMP, terreno, altura);
-    childjump.heuristica = Heuristica(childjump.estado, final);
-    if (childjump.estado.site.f == final.site.f and childjump.estado.site.c == final.site.c){
-      childjump.secuencia.push_back(JUMP);
-      current_node= childjump;
+    NodoT childWalk = current_node;
+    childWalk.estado = applyT(WALK, current_node.estado, terreno, altura);
+    childWalk.coste_acumulado += coste(current_node.estado, WALK, terreno, altura);
+    childWalk.heuristica = Heuristica(childWalk.estado, final);
+    if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
+      childWalk.secuencia.push_back(WALK);
+      current_node= childWalk;
       SolutionFound = true;
     }
-    if(explored.find(childjump) == explored.end()){
-      childjump.secuencia.push_back(JUMP);
-      frontier.insert(childjump);
+    if(explored.find(childWalk) == explored.end() and frontier.find(childWalk) == frontier.end()){
+      childWalk.secuencia.push_back(WALK);
+      frontier.insert(childWalk);
     }
-    else{
-      
-    }
-
-    if(!SolutionFound){
-      //generamos los hijos aplicar walk
-      NodoT childWalk = current_node;
-      childWalk.estado = applyA(WALK, current_node.estado, terreno, altura,sensores);
-      childWalk.coste_acumulado += coste(current_node.estado, WALK, terreno, altura);
-      childWalk.heuristica = Heuristica(childWalk.estado, final);
-      if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
+    else if(frontier.find(childWalk) != frontier.end()){
+      auto it = frontier.find(childWalk);
+      int f_child = childWalk.coste_acumulado + childWalk.heuristica;
+      int f_old   = it->coste_acumulado + it->heuristica;
+      if (f_child < f_old){
+        frontier.erase(it);
         childWalk.secuencia.push_back(WALK);
-        current_node= childWalk;
-        SolutionFound = true;
-      }
-      if(explored.find(childWalk) == explored.end()){
+        frontier.insert(childWalk);
+      }   
+    }
+    else if(explored.find(childWalk) != explored.end()){
+      auto it = explored.find(childWalk);
+      int f_child = childWalk.coste_acumulado + childWalk.heuristica;
+      int f_old   = it->coste_acumulado + it->heuristica;
+      if (f_child < f_old){
+        explored.erase(it);
         childWalk.secuencia.push_back(WALK);
         frontier.insert(childWalk);
       }
@@ -528,31 +528,68 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
     if(!SolutionFound){
       //hijo resultante aplicar giro izquierda
       NodoT childTurnSR = current_node;
-      childTurnSR.estado = applyA(TURN_SR, current_node.estado, terreno, altura, sensores);
+      childTurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
       childTurnSR.coste_acumulado += coste(current_node.estado, TURN_SR, terreno, altura);
       childTurnSR.heuristica = Heuristica(childTurnSR.estado, final);
-      if (explored.find(childTurnSR) == explored.end()){
+      if(explored.find(childTurnSR) == explored.end() and frontier.find(childTurnSR) == frontier.end()){
         childTurnSR.secuencia.push_back(TURN_SR);
         frontier.insert(childTurnSR);
       }
+      else if(frontier.find(childTurnSR) != frontier.end()){
+        auto it = frontier.find(childTurnSR);
+        int f_child = childTurnSR.coste_acumulado + childTurnSR.heuristica;
+        int f_old   = it->coste_acumulado + it->heuristica;
+        if (f_child < f_old){
+          frontier.erase(it);
+          childTurnSR.secuencia.push_back(TURN_SR);
+          frontier.insert(childTurnSR);
+        }   
+      }
+      else if(explored.find(childTurnSR) != explored.end()){
+        auto it = explored.find(childTurnSR);
+        int f_child = childTurnSR.coste_acumulado + childTurnSR.heuristica;
+        int f_old   = it->coste_acumulado + it->heuristica;
+        if (f_child < f_old){
+          explored.erase(it);
+          childTurnSR.secuencia.push_back(TURN_SR);
+          frontier.insert(childTurnSR);
+        }
+      }
+    
 
       //hijo resultante aplicar giro derecha
       NodoT childTurnSL = current_node;
-      childTurnSL.estado = applyA(TURN_SL, current_node.estado, terreno, altura, sensores);
+      childTurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
       childTurnSL.coste_acumulado += coste(current_node.estado, TURN_SL, terreno, altura);
       childTurnSL.heuristica = Heuristica(childTurnSL.estado, final);
-      if(explored.find(childTurnSL) == explored.end()){
+      if(explored.find(childTurnSL) == explored.end() and frontier.find(childTurnSL) == frontier.end()){
         childTurnSL.secuencia.push_back(TURN_SL);
         frontier.insert(childTurnSL);
       }
+      else if(frontier.find(childTurnSL) != frontier.end()){
+        auto it = frontier.find(childTurnSL);
+        int f_child = childTurnSL.coste_acumulado + childTurnSL.heuristica;
+        int f_old   = it->coste_acumulado + it->heuristica;
+        if (f_child < f_old){
+          frontier.erase(it);
+          childTurnSL.secuencia.push_back(TURN_SL);
+          frontier.insert(childTurnSL);
+        }   
+      }
+      else if(explored.find(childTurnSL) != explored.end()){
+        auto it = explored.find(childTurnSL);
+        int f_child = childTurnSL.coste_acumulado + childTurnSL.heuristica;
+        int f_old   = it->coste_acumulado + it->heuristica;
+        if (f_child < f_old){
+          explored.erase(it);
+          childTurnSL.secuencia.push_back(TURN_SL);
+          frontier.insert(childTurnSL);
+        }
+      }
     }
 
-    if(!SolutionFound and !frontier.empty()){
-      current_node =*frontier.begin();
-       while (explored.find(current_node) != explored.end() and !frontier.empty()){
-        frontier.erase(frontier.begin());
-        current_node = *frontier.begin();
-       } 
+    if(!SolutionFound and !frontier.empty()) {
+      current_node = *frontier.begin();
     }
 
     if(SolutionFound){
@@ -565,7 +602,11 @@ list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const Esta
 
 
 int ComportamientoTecnico::Heuristica(const EstadoT &st, const EstadoT &final){
-  return abs(st.site.f - final.site.f) + abs(st.site.c - final.site.c);
+  int dx = abs(st.site.f - final.site.f);
+  int dy = abs(st.site.c - final.site.c);
+  int h = max(dx, dy);
+  //int h = (abs(st.site.f - final.site.f) + abs(st.site.c - final.site.c));
+  return h;
 }
 
 int ComportamientoTecnico::coste(const EstadoT &st, const Action &accion, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura){
@@ -573,31 +614,18 @@ int ComportamientoTecnico::coste(const EstadoT &st, const Action &accion, const 
   EstadoT destino;
   int coste = 0, dif_altura ;
   switch(accion){
-    case JUMP:
-      destino = NextCasillaA(st, 2);
-      casilla = terreno[destino.site.f][destino.site.c];
-      if(casilla == 'A') coste = 90;
-      else if(casilla == 'H') coste = 10;
-      else if(casilla == 'S') coste = 4;
-      else coste = 3; 
-      
-      dif_altura = altura[destino.site.f][destino.site.c] - altura[st.site.f][st.site.c];
-      if (dif_altura == 1 ) coste += 5;
-      else  coste -= 2;
-      
-      break;
     case WALK:
-      destino = NextCasillaA(st, 1);
+      destino = NextCasillaT(st);
       casilla = terreno[destino.site.f][destino.site.c];
       if(casilla == 'A') coste = 60;
       else if(casilla == 'H') coste = 6;
       else if(casilla == 'S') coste = 3;
       else coste = 1; 
-      destino = NextCasillaA(st, 1);
+      destino = NextCasillaT(st);
       if (casilla == 'A' or casilla == 'H' or casilla == 'S'){
         dif_altura = altura[destino.site.f][destino.site.c] - altura[st.site.f][st.site.c];
         if (dif_altura == 1 ) coste += 5;
-        else  coste -= 2;
+        else if (dif_altura == -1) coste -= 2;
       }
       break;
     case TURN_SR:
@@ -618,17 +646,12 @@ int ComportamientoTecnico::coste(const EstadoT &st, const Action &accion, const 
   return coste;
 }
 
-EstadoT ComportamientoTecnico::applyA(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores){
+EstadoT ComportamientoTecnico::applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura){
   EstadoT next = st;
   switch(accion){
     case WALK:
-      if (CasillaAccesibleA(st,terreno,altura,1,sensores)){
-         next = NextCasillaA(st, 1);
-      }
-      break;
-    case JUMP:
-      if (CasillaAccesibleA(st,terreno,altura,2,sensores)){
-         next = NextCasillaA(st, 2);
+      if (CasillaAccesibleT(st,terreno,altura)){
+         next = NextCasillaT(st);
       }
       break;
     case TURN_SR:
@@ -641,61 +664,50 @@ EstadoT ComportamientoTecnico::applyA(Action accion, const EstadoT & st, const v
   return next;
 }
 
-bool ComportamientoTecnico::CasillaAccesibleA(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, int a, Sensores sensores){
-  EstadoT next = NextCasillaA(st, a);
-  bool check1 = false, check2 = false, check3 = false, check4 = false, check5 = false;
-  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M' ;
-  check2 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1 ;
-  check3 = terreno[next.site.f][next.site.c] != 'B' or (terreno[next.site.f][next.site.c] == 'B' and st.zapatillas);
-  if(a==2) {
-    EstadoT medio = NextCasillaA(st, 1);
-    check4 = terreno[medio.site.f][medio.site.c] != 'M' and terreno[medio.site.f][medio.site.c] != 'P' and sensores.agentes[2] != 'i';
-    check5 = terreno[medio.site.f][medio.site.c] != 'B' or (terreno[medio.site.f][medio.site.c] == 'B' and st.zapatillas);
-    return check1 and check2 and check3 and check4 and check5;
-  }
+
+bool ComportamientoTecnico::CasillaAccesibleT(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const
+  vector<vector<unsigned char>> &altura){
+  EstadoT next = NextCasillaT(st);
+  bool check1 = false, check2 = false, check3 = false;
+  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M';
+  check2 = terreno[next.site.f][next.site.c] != 'B' or (terreno[next.site.f][next.site.c] == 'B' and st.zapatillas);
+  check3 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1;
   return check1 and check2 and check3;
 }
 
-/*
- * @brief Devuelve la posición (fila, columna) de la casilla que hay delante del agente.
- * @param st Estado actual del agente (fila, columna, orientacion).
- * @param a Distancia a avanzar.
- * @return Estado con la fila y columna de la casilla de enfrente.
- */
-EstadoT ComportamientoTecnico::NextCasillaA(const EstadoT &st, int a){
+EstadoT ComportamientoTecnico::NextCasillaT(const EstadoT &st){
   EstadoT siguiente = st;
   switch (st.site.brujula){
     case norte:
-      siguiente.site.f = st.site.f - a;
+      siguiente.site.f = st.site.f - 1;
       break;
     case noreste:
-      siguiente.site.f = st.site.f - a;
-      siguiente.site.c = st.site.c + a;
+      siguiente.site.f = st.site.f - 1;
+      siguiente.site.c = st.site.c + 1;
       break;
     case este:
-      siguiente.site.c = st.site.c + a;
+      siguiente.site.c = st.site.c + 1;
       break;
     case sureste:
-      siguiente.site.f = st.site.f + a;
-      siguiente.site.c = st.site.c + a;
+      siguiente.site.f = st.site.f + 1;
+      siguiente.site.c = st.site.c + 1;
       break;
     case sur:
-      siguiente.site.f = st.site.f + a;
+      siguiente.site.f = st.site.f + 1;
       break;
     case suroeste:
-      siguiente.site.f = st.site.f + a;
-      siguiente.site.c = st.site.c - a;
+      siguiente.site.f = st.site.f + 1;
+      siguiente.site.c = st.site.c - 1;
       break;
     case oeste:
-      siguiente.site.c = st.site.c - a;
+      siguiente.site.c = st.site.c - 1;
       break;
     case noroeste:
-      siguiente.site.f = st.site.f - a;
-      siguiente.site.c = st.site.c - a;
+      siguiente.site.f = st.site.f - 1;
+      siguiente.site.c = st.site.c - 1;
   }
   return siguiente;
 }
-
 
 /**
  * @brief Comportamiento del técnico para el Nivel 4.
@@ -828,68 +840,7 @@ bool ComportamientoTecnico::Find (const NodoT & st, const list<NodoT> &lista){
   return (it != lista.end());
 }
 
-EstadoT ComportamientoTecnico::applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura){
-  EstadoT next = st;
-  switch(accion){
-    case WALK:
-      if (CasillaAccesibleT(st,terreno,altura)){
-         next = NextCasillaT(st);
-      }
-      break;
-    case TURN_SR:
-      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
-      break;
-    case TURN_SL:
-      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
-      break;
-  }
-  return next;
-}
 
-
-bool ComportamientoTecnico::CasillaAccesibleT(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const
-  vector<vector<unsigned char>> &altura){
-  EstadoT next = NextCasillaT(st);
-  bool check1 = false, check2 = false, check3 = false;
-  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M';
-  check2 = terreno[next.site.f][next.site.c] != 'B' or (terreno[next.site.f][next.site.c] == 'B' and st.zapatillas);
-  check3 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1;
-  return check1 and check2 and check3;
-}
-
-EstadoT ComportamientoTecnico::NextCasillaT(const EstadoT &st){
-  EstadoT siguiente = st;
-  switch (st.site.brujula){
-    case norte:
-      siguiente.site.f = st.site.f - 1;
-      break;
-    case noreste:
-      siguiente.site.f = st.site.f - 1;
-      siguiente.site.c = st.site.c + 1;
-      break;
-    case este:
-      siguiente.site.c = st.site.c + 1;
-      break;
-    case sureste:
-      siguiente.site.f = st.site.f + 1;
-      siguiente.site.c = st.site.c + 1;
-      break;
-    case sur:
-      siguiente.site.f = st.site.f + 1;
-      break;
-    case suroeste:
-      siguiente.site.f = st.site.f + 1;
-      siguiente.site.c = st.site.c - 1;
-      break;
-    case oeste:
-      siguiente.site.c = st.site.c - 1;
-      break;
-    case noroeste:
-      siguiente.site.f = st.site.f - 1;
-      siguiente.site.c = st.site.c - 1;
-  }
-  return siguiente;
-}
 
 // =========================================================================
 // FUNCIONES PROPORCIONADAS

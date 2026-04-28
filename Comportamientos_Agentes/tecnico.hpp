@@ -39,7 +39,22 @@ struct NodoT{
   }
 
   bool operator<(const NodoT &node) const{
-    return (coste_acumulado + heuristica) <  (node.coste_acumulado + node.heuristica);
+    int f1 = coste_acumulado + heuristica;
+    int f2 = node.coste_acumulado + node.heuristica;
+
+    if (f1 != f2) return f1 < f2;
+
+    // desempates IMPORTANTES
+    if (estado.site.f != node.estado.site.f)
+      return estado.site.f < node.estado.site.f;
+
+    if (estado.site.c != node.estado.site.c)
+      return estado.site.c < node.estado.site.c;
+
+    if (estado.site.brujula != node.estado.site.brujula)
+      return estado.site.brujula < node.estado.site.brujula;
+
+    return estado.zapatillas < node.estado.zapatillas;
   }
 };
 
@@ -249,10 +264,6 @@ protected:
   list<Action> Busqueda_A(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
   int Heuristica(const EstadoT &st, const EstadoT &final);
   int coste(const EstadoT &st, const Action &accion, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
-  bool CasillaAccesibleA(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, int a, Sensores sensores);
-  EstadoT NextCasillaA(const EstadoT &st, int a);
-  EstadoT applyA(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
-  int funcionValoracion(const NodoT &actual, const EstadoT &final, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, const Action &accion, Sensores sensores);
 
   //nivel E
   list<Action> Busqueda_Anchura(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
