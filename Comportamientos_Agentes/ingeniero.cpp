@@ -518,7 +518,6 @@ list<Action> ComportamientoIngeniero::Busqueda_Anchura(const EstadoI &inicio, co
       current_node.estado.zapatillas = true;
     }
 
-
     NodoI childjump = current_node;
     childjump.estado = applyI(JUMP, current_node.estado, terreno, altura,sensores);
     if (childjump.estado.site.f == final.site.f and childjump.estado.site.c == final.site.c){
