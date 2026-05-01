@@ -42,6 +42,7 @@ struct NodoTub{
   Paso actual;
   int coste;
   int paso;
+  int alt;
 
   bool operator==(const NodoTub &node) const{
     return actual.fil == node.actual.fil and actual.col == node.actual.col ;
@@ -49,8 +50,8 @@ struct NodoTub{
 
   bool operator<(const NodoTub &node) const {
     return (paso < node.paso) ;
-
     return (coste < node.coste);
+    return alt < node.alt;
     return actual.fil < node.actual.fil;
     return (actual.col < node.actual.col);
     return (actual.col > node.actual.col);
@@ -263,8 +264,7 @@ protected:
 
   //Nivel 4
   list<Paso> Busqueda(const Paso &inicio, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
-  int costeD ( Paso &inicio,  Paso &destino, const vector<vector<unsigned char>> &terreno);
-  bool PonerTuberia(  Paso &inicio,  Paso &destino, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura );
+  int costeD (  Paso &destino, const vector<vector<unsigned char>> &terreno);
 
 private:
   // =========================================================================
