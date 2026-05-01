@@ -681,7 +681,160 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores)
 {
+  if (!hayPlan){
+    Paso inicio;
+    inicio.fil = sensores.BelPosF;
+    inicio.col = sensores.BelPosC;
+    inicio.op  = 0;
+
+    planTub = Busqueda(inicio, mapaResultado, mapaCotas, sensores);
+
+    if (!planTub.empty()) {
+      PintaPlan(planTub);
+      VisualizaRedTuberias(planTub);
+    } else {
+      cout << "No se encontro plan de tuberias" << endl;
+    }
+    hayPlan = true;  // Ya intentamos buscar, no volver a intentarlo
+  }
+
+  // En nivel 4 solo planificamos, el agente se queda quieto
   return IDLE;
+}
+
+list<Paso> ComportamientoIngeniero::Busqueda( const Paso &inicio,  const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores)
+{
+NodoTub current_node;
+  queue<NodoTub> frontier;
+  set<pair<int,int>> explored;
+  list<Paso> plan;
+
+  current_node.actual = inicio;
+  current_node.coste = 0;
+  current_node.paso = 0;
+  current_node.secuencia.push_back(inicio);
+  frontier.push(current_node);
+
+  bool SolutionFound = false;
+
+  int filas = terreno.size();
+  int cols = terreno[0].size();
+
+  while (!frontier.empty() && !SolutionFound) {
+
+    current_node = frontier.front();
+    frontier.pop();
+
+    pair<int,int> pos = {current_node.actual.fil, current_node.actual.col};
+
+    if (explored.find(pos) != explored.end())
+      continue;
+
+    explored.insert(pos);
+
+    if (terreno[pos.first][pos.second] == 'U') {
+      plan = current_node.secuencia;
+      SolutionFound = true;
+    }
+    else {
+
+      vector<pair<int,int>> movimientos = { {0,-1}, {-1,0}, {1,0}, {0,1} };
+
+      for (auto m : movimientos) {
+
+        int nf = current_node.actual.fil + m.first;
+        int nc = current_node.actual.col + m.second;
+
+        if (nf < 0 || nf >= filas || nc < 0 || nc >= cols)
+          continue;
+
+        NodoTub child = current_node;
+        child.actual.fil = nf;
+        child.actual.col = nc;
+        child.actual.op = 0;
+
+        char casilla = terreno[nf][nc];
+
+        if (casilla == 'P' || casilla == 'M' || casilla == 'B')
+          continue;
+
+        int altInicio  = (int)altura[current_node.actual.fil][current_node.actual.col];
+        int altDestino = (int)altura[nf][nc];
+        int difalt = altInicio - altDestino;
+
+        child.coste += costeD(current_node.actual, child.actual, terreno);
+        child.paso += 1;
+
+
+
+        if(child.coste <= sensores.max_ecologico){
+          if (difalt == 0 || difalt == 1){
+          child.secuencia.push_back(child.actual);
+          frontier.push(child);
+          }
+          else if (difalt == 2 and casilla != 'A'){
+
+            if (casilla == 'H') child.coste += 55;
+            else if (casilla == 'S') child.coste += 30;
+            else if (casilla == 'C' || casilla == 'U') child.coste += 10;
+            else child.coste += 40;
+
+            if(child.coste <= sensores.max_ecologico){
+              child.secuencia.push_back(child.actual);
+              child.actual.op = -1;
+              child.secuencia.push_back(child.actual);
+              frontier.push(child);
+            }
+          }
+          else if (difalt == -1  and casilla != 'A'){
+
+            if (casilla == 'H') child.coste += 65;
+            else if (casilla == 'S') child.coste += 40;
+            else if (casilla == 'C' || casilla == 'U') child.coste += 25;
+            else child.coste += 50;
+
+            if(child.coste <= sensores.max_ecologico){
+              child.secuencia.push_back(child.actual);
+              child.actual.op = 1;
+              child.secuencia.push_back(child.actual);
+              frontier.push(child);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return plan;
+}
+
+bool ComportamientoIngeniero::PonerTuberia(  Paso &inicio,  Paso &destino, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura ){
+  bool check1 = false, check2 = false, check3 = false;
+  char casilla = terreno[destino.fil][destino.col];
+
+
+  int altInicio  = (int)altura[inicio.fil][inicio.col];
+  int altDestino = (int)altura[destino.fil][destino.col];
+  int difalt = altInicio - altDestino;
+
+  check2 = (difalt == 0 or difalt == 1);
+  //check3 = !(casilla == 'A' and !(difalt == 0 or difalt == 1) );     
+
+  return check1 and check2 ;
+}
+
+int ComportamientoIngeniero::costeD( Paso &inicio,  Paso &destino, const vector<vector<unsigned char>> &terreno){
+
+  char casilla = terreno[destino.fil][destino.col];
+  int coste = 0;
+
+  if (casilla == 'A')  coste = 50;
+  else if( casilla == 'H') coste = 45;
+  else if( casilla == 'S') coste = 25;
+  else if( casilla == 'C' or casilla == 'U') coste = 15;
+  else coste = 30;
+  
+  return coste;
 }
 
 /**

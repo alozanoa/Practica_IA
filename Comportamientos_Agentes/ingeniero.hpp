@@ -13,10 +13,12 @@
 struct EstadoI {
  ubicacion site;
  bool zapatillas;
+
  bool operator==(const EstadoI &st) const{
- return site == st.site and zapatillas == st.zapatillas;
+  return site == st.site and zapatillas == st.zapatillas;
  }
 };
+
 
 struct NodoI{
  EstadoI estado;
@@ -32,6 +34,27 @@ struct NodoI{
     else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and estado.site.brujula < node.estado.site.brujula) return true;
     else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and estado.site.brujula == node.estado.site.brujula and estado.zapatillas < node.estado.zapatillas) return true;
     else return false;
+  }
+};
+
+struct NodoTub{
+  list<Paso> secuencia;
+  Paso actual;
+  int coste;
+  int paso;
+
+  bool operator==(const NodoTub &node) const{
+    return actual.fil == node.actual.fil and actual.col == node.actual.col ;
+  }
+
+  bool operator<(const NodoTub &node) const {
+    return (paso < node.paso) ;
+
+    return (coste < node.coste);
+    return actual.fil < node.actual.fil;
+    return (actual.col < node.actual.col);
+    return (actual.col > node.actual.col);
+    return false;
   }
 };
 
@@ -231,12 +254,18 @@ protected:
   bool es_transitable(unsigned char c, bool zap) ;
   void MarcarCasillasVisibles(Sensores sensores);
 
-  // niveles 2, 3, 4 y 5
+  // nivel 2
   list<Action> Busqueda_Anchura(const EstadoI &inicio, const EstadoI &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
   bool CasillaAccesible(const EstadoI &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, int a, Sensores sensores);
   EstadoI NextCasilla(const EstadoI &st, int a);
   EstadoI applyI(Action accion, const EstadoI & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
   bool Find (const NodoI & st, const list<NodoI> &lista);
+
+  //Nivel 4
+  list<Paso> Busqueda(const Paso &inicio, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
+  int costeD ( Paso &inicio,  Paso &destino, const vector<vector<unsigned char>> &terreno);
+  bool PonerTuberia(  Paso &inicio,  Paso &destino, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura );
+
 private:
   // =========================================================================
   // VARIABLES DE ESTADO (PUEDEN SER EXTENDIDAS POR EL ALUMNO)
@@ -261,6 +290,9 @@ private:
   //nivel 2
   bool hayPlan; // Indica si actualmente se dispone de un plan de acciones a seguir
   list<Action> plan; // Lista de acciones resultante del proceso de búsqueda
+
+  //nivel 4
+  list<Paso> planTub;
 };
 
 #endif
