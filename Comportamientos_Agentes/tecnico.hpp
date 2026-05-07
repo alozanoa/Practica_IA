@@ -28,11 +28,23 @@
   }
 };
 
+ // Necesitas añadir esto al struct EstadoT para el unordered_map:
+struct EstadoHash {
+    size_t operator()(const EstadoT &e) const {
+        size_t h = 0;
+        h ^= std::hash<int>()(e.site.f)       + 0x9e3779b9 + (h<<6) + (h>>2);
+        h ^= std::hash<int>()(e.site.c)       + 0x9e3779b9 + (h<<6) + (h>>2);
+        h ^= std::hash<int>()(e.site.brujula) + 0x9e3779b9 + (h<<6) + (h>>2);
+        h ^= std::hash<bool>()(e.zapatillas)  + 0x9e3779b9 + (h<<6) + (h>>2);
+        return h;
+    }
+};
+
 struct NodoT{
- EstadoT estado;
- list<Action> secuencia;
- int coste_acumulado;
- int heuristica;
+  EstadoT estado;
+  list<Action> secuencia;
+  int coste_acumulado;
+  int heuristica;
 
   bool operator==(const NodoT &node) const{
     return estado == node.estado;
@@ -44,7 +56,6 @@ struct NodoT{
 
     if (f1 != f2) return f1 < f2;
 
-    // desempates IMPORTANTES
     if (estado.site.f != node.estado.site.f)
       return estado.site.f < node.estado.site.f;
 
@@ -56,7 +67,14 @@ struct NodoT{
 
     return estado.zapatillas < node.estado.zapatillas;
   }
+
+  bool operator>(const NodoT &node) const{
+    return node < *this;
+  }
 };
+
+
+
 
 
 class ComportamientoTecnico : public Comportamiento {
@@ -98,7 +116,16 @@ public:
     // Nivel E
     hayPlan = false;
     tiene_zapatillas = false;
+    enfrentarse = false;
+    poniendotuberias = false;
+    ingenierogira = false;
+    filing = 0;
+    coling = 0;
+    haciaingeniero = false;
 
+
+    inge.site.f = 0;
+    inge.site.c = 0;
   }
 
   ComportamientoTecnico(const ComportamientoTecnico &comport): Comportamiento(comport) {}
@@ -261,16 +288,16 @@ protected:
   void MarcarCasillasVisibles(Sensores sensores);
 
   //nivel 3
-  list<Action> Busqueda_A(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
+  list<Action> Busqueda_A(const EstadoT &inicio, const EstadoT &final, const EstadoT inge, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
   int Heuristica(const EstadoT &st, const EstadoT &final);
   int coste(const EstadoT &st, const Action &accion, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
 
   //nivel E
-  list<Action> Busqueda_Anchura(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
+  //list<Action> Busqueda_Anchura(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
   
-  bool CasillaAccesibleT(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
+  bool CasillaAccesibleT(const EstadoT &st, const EstadoT &inge,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
   EstadoT NextCasillaT(const EstadoT &st);
-  EstadoT applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura);
+  EstadoT applyT(Action accion, const EstadoT & st,const EstadoT &inge, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
   bool Find (const NodoT & st, const list<NodoT> &lista);
 
 private:
@@ -289,9 +316,18 @@ private:
   int giros_seguidos; // Para detectar bucles de giro en el nivel 0
   bool cambio; // Para alternar entre giro a la derecha e izquierda al detectar un posible bucle
 
-  //Nivel E
+  //Nivel E,3,5
   bool hayPlan;
   list<Action> plan;
+  bool enfrentarse;
+  bool poniendotuberias;
+  bool ingenierogira;
+  bool haciaingeniero;
+  int filing, coling;
+
+  EstadoT inge;
+
+  bool encontreinge;
 };
 
 #endif

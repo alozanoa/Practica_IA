@@ -57,6 +57,10 @@ struct NodoTub{
     return (actual.col > node.actual.col);
     return false;
   }
+
+  bool operator>(const NodoTub &node) const {
+  return paso > node.paso;
+}
 };
 
 
@@ -85,6 +89,20 @@ public:
     giros_choque = 0;
     giros_seguidos = 0;
     cambio = false;
+
+    //nivel 6
+    hayPlan = false;
+    tiene_zapatillas = false;
+    plantuberias = false;
+    ingenieropos = false;
+    sacarinfo = false;
+    posicionado = false;
+    primeravez = true;
+    alteradoterreno = false;
+    encontrefab = false;
+    tratamiento.c = 0;
+    tratamiento.f = 0;
+
   }
 
   /**
@@ -99,6 +117,14 @@ public:
                           
     hayPlan = false;
     tiene_zapatillas = false;
+    plantuberias = false;
+    ingenieropos = false;
+    sacarinfo = false;
+    posicionado = false;
+    primeravez = true;
+    alteradoterreno = false;
+    giro45Der = 0;
+
   }
 
   ComportamientoIngeniero(const ComportamientoIngeniero &comport)
@@ -264,7 +290,7 @@ protected:
 
   //Nivel 4
   list<Paso> Busqueda(const Paso &inicio, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores);
-  int costeD (  Paso &destino, const vector<vector<unsigned char>> &terreno);
+  int costeD ( Paso &inicio, Paso &destino, const vector<vector<unsigned char>> &terreno);
 
 private:
   // =========================================================================
@@ -293,6 +319,21 @@ private:
 
   //nivel 4
   list<Paso> planTub;
+
+  //Nivel 5
+  bool ingenieropos; //el ingeniero se posiciona el la belkamina
+  bool plantuberias; //se obtiene el plan de las tuberias
+  bool sacarinfo;
+  bool posicionado;
+  bool primeravez;
+  Paso meta;
+  bool alteradoterreno;
+  Orientacion mirartec;
+  
+  //Nivel 6
+  bool encontrefab;
+  ubicacion tratamiento;
+
 };
 
 #endif

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <unordered_map>
 
 using namespace std;
 
@@ -19,7 +20,6 @@ Action ComportamientoTecnico::think(Sensores sensores) {
     case 0: accion = ComportamientoTecnicoNivel_0(sensores); break;
     case 1: accion = ComportamientoTecnicoNivel_1(sensores); break;
     case 2: accion = ComportamientoTecnicoNivel_2(sensores); break;
-    //case 3: accion = ComportamientoTecnicoNivel_E(sensores); break;
     case 3: accion = ComportamientoTecnicoNivel_3(sensores); break; 
     case 4: accion = ComportamientoTecnicoNivel_4(sensores); break;
     case 5: accion = ComportamientoTecnicoNivel_5(sensores); break;
@@ -325,7 +325,6 @@ char ComportamientoTecnico::ViablePorAltura_1(char casilla,  int dif,  int veces
 }
 
 
-
 int ComportamientoTecnico::vecesVistas(int posf, int posc, Orientacion brujula){
 
   if(brujula == norte) return mapaExplorado[posf-1][posc];
@@ -447,6 +446,16 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
   Action accion = IDLE;
+
+  if(sensores.choque and sensores.agentes[2] == 'i') {
+    hayPlan = false;
+    EstadoT actual;
+    actual.site.f = sensores.posF;
+    actual.site.c = sensores.posC;
+    actual.site.brujula = sensores.rumbo;
+    inge = NextCasillaT(actual);
+  }
+
   if (!hayPlan){
     // Invocar al método de búsqueda
     EstadoT inicio, fin;
@@ -456,7 +465,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
     inicio.zapatillas = tiene_zapatillas;
     fin.site.f = sensores.BelPosF;
     fin.site.c = sensores.BelPosC;
-    plan = Busqueda_A(inicio, fin, mapaResultado, mapaCotas, sensores);
+    plan = Busqueda_A(inicio, fin,inge , mapaResultado, mapaCotas, sensores);
     VisualizaPlan(inicio.site,plan);
     hayPlan = plan.size() != 0 ;
   }
@@ -470,143 +479,75 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
   return accion;
 }
 
-list<Action> ComportamientoTecnico::Busqueda_A(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores)
+
+
+list<Action> ComportamientoTecnico::Busqueda_A(  const EstadoT &inicio, const EstadoT &final, const EstadoT inge, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura,  Sensores sensores)
 {
-  NodoT current_node;
-  set<NodoT> frontier;
-  set<NodoT> explored;
-  list<Action> plan;
+    priority_queue<NodoT, vector<NodoT>, greater<NodoT>> frontier;
 
-  current_node.estado = inicio;
-  current_node.coste_acumulado = 0;
-  current_node.heuristica = Heuristica(inicio, final);
-  frontier.insert(current_node);
-  bool SolutionFound = ( current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c );
-  while ( !frontier.empty() and !SolutionFound ){
-    frontier.erase(current_node);
-    explored.insert(current_node);
+    // Mejor f conocido para cada estado
+    unordered_map<EstadoT, int, EstadoHash> best_f;
 
-    //comprobamos si estoy en una casilla que da las zapatillas
-    if (terreno[current_node.estado.site.f][current_node.estado.site.c] == 'D'){
-      current_node.estado.zapatillas = true;
-    }
+    NodoT current_node;
+    current_node.estado          = inicio;
+    current_node.coste_acumulado = 0;
+    current_node.heuristica      = Heuristica(inicio, final);
 
-    NodoT childWalk = current_node;
-    childWalk.estado = applyT(WALK, current_node.estado, terreno, altura);
-    childWalk.coste_acumulado += coste(current_node.estado, WALK, terreno, altura);
-    childWalk.heuristica = Heuristica(childWalk.estado, final);
-    if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
-      childWalk.secuencia.push_back(WALK);
-      current_node= childWalk;
-      SolutionFound = true;
-    }
-    if(explored.find(childWalk) == explored.end() and frontier.find(childWalk) == frontier.end()){
-      childWalk.secuencia.push_back(WALK);
-      frontier.insert(childWalk);
-    }
-    else if(frontier.find(childWalk) != frontier.end()){
-      auto it = frontier.find(childWalk);
-      int f_child = childWalk.coste_acumulado + childWalk.heuristica;
-      int f_old   = it->coste_acumulado + it->heuristica;
-      if (f_child < f_old){
-        frontier.erase(it);
-        childWalk.secuencia.push_back(WALK);
-        frontier.insert(childWalk);
-      }   
-    }
-    else if(explored.find(childWalk) != explored.end()){
-      auto it = explored.find(childWalk);
-      int f_child = childWalk.coste_acumulado + childWalk.heuristica;
-      int f_old   = it->coste_acumulado + it->heuristica;
-      if (f_child < f_old){
-        explored.erase(it);
-        childWalk.secuencia.push_back(WALK);
-        frontier.insert(childWalk);
-      }
-    }
+    frontier.push(current_node);
+    best_f[inicio] = current_node.coste_acumulado + current_node.heuristica;
 
-    if(!SolutionFound){
-      //hijo resultante aplicar giro izquierda
-      NodoT childTurnSR = current_node;
-      childTurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
-      childTurnSR.coste_acumulado += coste(current_node.estado, TURN_SR, terreno, altura);
-      childTurnSR.heuristica = Heuristica(childTurnSR.estado, final);
-      if(explored.find(childTurnSR) == explored.end() and frontier.find(childTurnSR) == frontier.end()){
-        childTurnSR.secuencia.push_back(TURN_SR);
-        frontier.insert(childTurnSR);
-      }
-      else if(frontier.find(childTurnSR) != frontier.end()){
-        auto it = frontier.find(childTurnSR);
-        int f_child = childTurnSR.coste_acumulado + childTurnSR.heuristica;
-        int f_old   = it->coste_acumulado + it->heuristica;
-        if (f_child < f_old){
-          frontier.erase(it);
-          childTurnSR.secuencia.push_back(TURN_SR);
-          frontier.insert(childTurnSR);
-        }   
-      }
-      else if(explored.find(childTurnSR) != explored.end()){
-        auto it = explored.find(childTurnSR);
-        int f_child = childTurnSR.coste_acumulado + childTurnSR.heuristica;
-        int f_old   = it->coste_acumulado + it->heuristica;
-        if (f_child < f_old){
-          explored.erase(it);
-          childTurnSR.secuencia.push_back(TURN_SR);
-          frontier.insert(childTurnSR);
+    while (!frontier.empty()) {
+
+        current_node = frontier.top();
+        frontier.pop();
+
+        int f_actual = current_node.coste_acumulado + current_node.heuristica;
+
+        if (best_f[current_node.estado] < f_actual)
+            continue;
+
+        // Objetivo
+        if (current_node.estado.site.f == final.site.f &&
+            current_node.estado.site.c == final.site.c)
+            return current_node.secuencia;
+
+        // Recoger zapatillas
+        if (terreno[current_node.estado.site.f][current_node.estado.site.c] == 'D')
+            current_node.estado.zapatillas = true;
+
+        // Expandir hijos
+        for (Action action : {WALK, TURN_SR, TURN_SL}) {
+
+            NodoT child  = current_node;
+            child.estado = applyT(action, current_node.estado, inge, terreno, altura, sensores);
+
+            child.coste_acumulado += coste(current_node.estado, action, terreno, altura);
+            child.heuristica = Heuristica(child.estado, final);
+
+            int f_child = child.coste_acumulado + child.heuristica;
+
+            // Solo guardamos si mejora el estado
+            if (!best_f.count(child.estado) || f_child < best_f[child.estado]) {
+
+                best_f[child.estado] = f_child;
+
+                child.secuencia.push_back(action);
+                frontier.push(child);
+            }
         }
-      }
-    
-
-      //hijo resultante aplicar giro derecha
-      NodoT childTurnSL = current_node;
-      childTurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
-      childTurnSL.coste_acumulado += coste(current_node.estado, TURN_SL, terreno, altura);
-      childTurnSL.heuristica = Heuristica(childTurnSL.estado, final);
-      if(explored.find(childTurnSL) == explored.end() and frontier.find(childTurnSL) == frontier.end()){
-        childTurnSL.secuencia.push_back(TURN_SL);
-        frontier.insert(childTurnSL);
-      }
-      else if(frontier.find(childTurnSL) != frontier.end()){
-        auto it = frontier.find(childTurnSL);
-        int f_child = childTurnSL.coste_acumulado + childTurnSL.heuristica;
-        int f_old   = it->coste_acumulado + it->heuristica;
-        if (f_child < f_old){
-          frontier.erase(it);
-          childTurnSL.secuencia.push_back(TURN_SL);
-          frontier.insert(childTurnSL);
-        }   
-      }
-      else if(explored.find(childTurnSL) != explored.end()){
-        auto it = explored.find(childTurnSL);
-        int f_child = childTurnSL.coste_acumulado + childTurnSL.heuristica;
-        int f_old   = it->coste_acumulado + it->heuristica;
-        if (f_child < f_old){
-          explored.erase(it);
-          childTurnSL.secuencia.push_back(TURN_SL);
-          frontier.insert(childTurnSL);
-        }
-      }
     }
 
-    if(!SolutionFound and !frontier.empty()) {
-      current_node = *frontier.begin();
-    }
-
-    if(SolutionFound){
-      plan = current_node.secuencia;
-    }
-  }
-
-  return plan;
+    return {};
 }
 
+int ComportamientoTecnico::Heuristica(const EstadoT &st, const EstadoT &goal)
+{
+    int df = abs(st.site.f - goal.site.f);
+    int dc = abs(st.site.c - goal.site.c);
 
-int ComportamientoTecnico::Heuristica(const EstadoT &st, const EstadoT &final){
-  int dx = abs(st.site.f - final.site.f);
-  int dy = abs(st.site.c - final.site.c);
-  int h = max(dx, dy);
-  //int h = (abs(st.site.f - final.site.f) + abs(st.site.c - final.site.c));
-  return h;
+    int h = max(df,dc);
+
+    return h;
 }
 
 int ComportamientoTecnico::coste(const EstadoT &st, const Action &accion, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura){
@@ -621,11 +562,10 @@ int ComportamientoTecnico::coste(const EstadoT &st, const Action &accion, const 
       else if(casilla == 'H') coste = 6;
       else if(casilla == 'S') coste = 3;
       else coste = 1; 
-      destino = NextCasillaT(st);
       if (casilla == 'A' or casilla == 'H' or casilla == 'S'){
         dif_altura = altura[destino.site.f][destino.site.c] - altura[st.site.f][st.site.c];
-        if (dif_altura == 1 ) coste += 5;
-        else if (dif_altura == -1) coste -= 2;
+        if (dif_altura == 1 ) coste = coste + 5;
+        else if (dif_altura == -1) coste = coste - 2;
       }
       break;
     case TURN_SR:
@@ -643,15 +583,21 @@ int ComportamientoTecnico::coste(const EstadoT &st, const Action &accion, const 
     default: 
       return 0; // IDLE no tiene coste
   }
+
+  if (coste < 0) coste = 0;
+
   return coste;
 }
 
-EstadoT ComportamientoTecnico::applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura){
+EstadoT ComportamientoTecnico::applyT(Action accion, const EstadoT & st,const EstadoT &inge, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores){
   EstadoT next = st;
   switch(accion){
     case WALK:
-      if (CasillaAccesibleT(st,terreno,altura)){
+      if (CasillaAccesibleT(st,inge,terreno,altura, sensores)){
          next = NextCasillaT(st);
+         if(terreno[next.site.f][next.site.c] == 'D'){
+          next.zapatillas = true;
+         }
       }
       break;
     case TURN_SR:
@@ -665,14 +611,14 @@ EstadoT ComportamientoTecnico::applyT(Action accion, const EstadoT & st, const v
 }
 
 
-bool ComportamientoTecnico::CasillaAccesibleT(const EstadoT &st, const vector<vector<unsigned char>> &terreno, const
-  vector<vector<unsigned char>> &altura){
+bool ComportamientoTecnico::CasillaAccesibleT(const EstadoT &st,const EstadoT &inge, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores){
   EstadoT next = NextCasillaT(st);
-  bool check1 = false, check2 = false, check3 = false;
+  bool check1 = false, check2 = false, check3 = false, check4 = false;
   check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M';
   check2 = terreno[next.site.f][next.site.c] != 'B' or (terreno[next.site.f][next.site.c] == 'B' and st.zapatillas);
   check3 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1;
-  return check1 and check2 and check3;
+  check4 = !(next.site.f == inge.site.f and next.site.c == inge.site.c );
+  return check1 and check2 and check3 and check4;
 }
 
 EstadoT ComportamientoTecnico::NextCasillaT(const EstadoT &st){
@@ -724,7 +670,69 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_4(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+
+  ActualizarMapa(sensores);
+ 
+  if(sensores.venpaca){
+    filing = sensores.GotoF;
+    coling = sensores.GotoC;
+    haciaingeniero = true;
+  }
+
+  if (!hayPlan and haciaingeniero){
+    cout << "me choque asi q recalculo" <<endl;
+    EstadoT inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = filing;
+    fin.site.c = coling;
+    plan = Busqueda_A(inicio, fin,inge, mapaResultado, mapaCotas, sensores);
+    VisualizaPlan(inicio.site,plan);
+    hayPlan = plan.size() != 0 ;
+    inge.site.f = 0;
+    inge.site.c = 0;
+  }
+  else if(sensores.choque){
+     if( sensores.agentes[2] == 'i') {
+        EstadoT actual;
+        actual.site.f = sensores.posF;
+        actual.site.c = sensores.posC;
+        actual.site.brujula = sensores.rumbo;
+        inge = NextCasillaT(actual);
+      }
+     hayPlan = false;
+  } 
+  if (hayPlan and plan.size()>0){
+    if(sensores.agentes[2] == 'i' and poniendotuberias) accion = IDLE;
+    else{   
+      accion = plan.front();
+      plan.pop_front();
+    }
+  }
+  else if (plan.size()== 0 and hayPlan){
+    hayPlan = false;
+    haciaingeniero = false;
+    sensores.venpaca = false;
+    enfrentarse = true;
+  }
+
+  if(enfrentarse){
+   
+    if(sensores.enfrente ){
+      //cout << "INSTALO TECNICO" << endl;
+      poniendotuberias = true;
+      accion = INSTALL;
+      enfrentarse = false;
+    } 
+    else if(sensores.agentes[2] != 'i') {
+      accion = TURN_SR;
+    } 
+  }
+  
+  return accion;
 }
 
 /**
@@ -733,14 +741,76 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+
+  ActualizarMapa(sensores);
+ 
+  if(sensores.venpaca){
+    filing = sensores.GotoF;
+    coling = sensores.GotoC;
+    haciaingeniero = true;
+  }
+
+  if (!hayPlan and haciaingeniero){
+    
+    EstadoT inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = filing;
+    fin.site.c = coling;
+    plan = Busqueda_A(inicio, fin,inge, mapaResultado, mapaCotas, sensores);
+    VisualizaPlan(inicio.site,plan);
+    hayPlan = plan.size() != 0 ;
+    if(hayPlan) encontreinge = true;
+  }
+  else if(sensores.choque){
+     if( sensores.agentes[2] == 'i') {
+        EstadoT actual;
+        actual.site.f = sensores.posF;
+        actual.site.c = sensores.posC;
+        actual.site.brujula = sensores.rumbo;
+        inge = NextCasillaT(actual);
+      }
+     hayPlan = false;
+  } 
+  if (hayPlan and plan.size()>0){
+    char casilla = sensores.superficie[2];
+    if(casilla == 'P' or casilla == 'M' or (casilla == 'B' and !tiene_zapatillas)){
+      hayPlan = false;
+    }
+    if(sensores.agentes[2] == 'i' and poniendotuberias) accion = IDLE;
+    else{   
+      accion = plan.front();
+      plan.pop_front();
+    }
+  }
+  else if (plan.size()== 0 and hayPlan){
+    hayPlan = false;
+    haciaingeniero = false;
+    sensores.venpaca = false;
+    enfrentarse = true;
+  }
+
+  if(enfrentarse){
+   
+    if(sensores.enfrente ){
+      //cout << "INSTALO TECNICO" << endl;
+      poniendotuberias = true;
+      accion = INSTALL;
+      enfrentarse = false;
+    } 
+    else if(sensores.agentes[2] != 'i') {
+      accion = TURN_SR;
+    } 
+  }
+  
+  return accion;
 }
 
-/**
- * @brief Comportamiento del técnico para el Nivel E (especial tutorial parte 2).
- * @param sensores Datos actuales de los sensores.
- * @return Acción a realizar.
- */
+/*
+
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores){
   Action accion = IDLE;
   if (!hayPlan){
@@ -766,8 +836,6 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores){
   return accion;
 }
 
-
-
 list<Action> ComportamientoTecnico::Busqueda_Anchura(const EstadoT &inicio, const EstadoT &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura)
 {
   NodoT current_node;
@@ -789,7 +857,7 @@ list<Action> ComportamientoTecnico::Busqueda_Anchura(const EstadoT &inicio, cons
 
     //generamos los hijos aplicar walk
     NodoT childWalk = current_node;
-    childWalk.estado = applyT(WALK, current_node.estado, terreno, altura);
+    childWalk.estado = applyT(WALK, current_node.estado, terreno, altura, ensores);
     if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
       childWalk.secuencia.push_back(WALK);
       current_node= childWalk;
@@ -831,6 +899,7 @@ list<Action> ComportamientoTecnico::Busqueda_Anchura(const EstadoT &inicio, cons
 
   return plan;
 }
+*/
 
 bool ComportamientoTecnico::Find (const NodoT & st, const list<NodoT> &lista){
   auto it = lista.begin();

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <tuple>
 
 using namespace std;
 
@@ -386,86 +387,6 @@ int ComportamientoIngeniero::vecesVistas(int posf, int posc, Orientacion brujula
   return 0;
 }
   
-
-/**
- * @brief Mapa de vistos por el agente
- * @param posf Fila de la posición actual.
- * @param posc Columna de la posición actual.
- * @param brujula Orientación del agente.
- * @return Acción a realizar.
- */
-void ComportamientoIngeniero::ActualizarExploracion(int posf, int posc, int brujula){
- 
-  mapaExplorado[posf][posc] = 1; // Marcar la posición actual como explorada
-
-  switch (brujula)
-  {  
-    case norte:
-      for (int j = 1; j < 4; j++)
-        for (int i = -j; i <= j; i++)
-          mapaExplorado[posf - j][posc + i] = 1; // Marcar las casillas delante como exploradas
-      break;
-    case noreste:
-      mapaExplorado[posf - 1][posc] = 1;
-      mapaExplorado[posf - 1][posc + 1] = 1;
-      mapaExplorado[posf][posc + 1] = 1;
-      mapaExplorado[posf - 2][posc] = 1;
-      mapaExplorado[posf - 2][posc + 1] = 1;
-      mapaExplorado[posf - 2][posc + 2] = 1;
-      mapaExplorado[posf - 1][posc + 2] = 1;
-      mapaExplorado[posf][posc + 2] = 1;
-      break;
-    case este:
-      for (int j = 1; j < 4; j++)
-        for (int i = -j; i <= j; i++)          
-          mapaExplorado[posf + i][posc + j] = 1; // Marcar las casillas delante como exploradas
-      break;
-    case sureste:
-      mapaExplorado[posf][posc + 1] = 1;
-      mapaExplorado[posf + 1][posc + 1] = 1;
-      mapaExplorado[posf + 1][posc] = 1;
-      mapaExplorado[posf][posc + 2] = 1;
-      mapaExplorado[posf + 1][posc + 2] = 1;
-      mapaExplorado[posf + 2][posc + 2] = 1;
-      mapaExplorado[posf + 2][posc + 1] = 1;
-      mapaExplorado[posf + 2][posc] = 1;
-      break;
-    case sur:
-      for (int j = 1; j < 4; j++)
-        for (int i = -j; i <= j; i++)
-          mapaExplorado[posf + j][posc - i] = 1; // Marcar las casillas delante como exploradas
-      break;
-    case suroeste:
-      mapaExplorado[posf + 1][posc] = 1;
-      mapaExplorado[posf + 1][posc - 1] = 1;
-      mapaExplorado[posf][posc - 1] = 1;    
-      mapaExplorado[posf + 2][posc] = 1;
-      mapaExplorado[posf + 2][posc - 1] = 1;
-      mapaExplorado[posf + 2][posc - 2] = 1;
-      mapaExplorado[posf + 1][posc - 2] = 1;
-      mapaExplorado[posf][posc - 2] = 1;   
-      break;
-    case oeste:
-      for (int j = 1; j < 4; j++)
-        for (int i = -j; i <= j; i++)
-          mapaExplorado[posf - i][posc - j] = 1; // Marcar las casillas delante como exploradas
-      break;
-    case noroeste:
-      mapaExplorado[posf - 1][posc] = 1;
-      mapaExplorado[posf - 1][posc - 1] = 1;
-      mapaExplorado[posf][posc - 1] = 1;
-      mapaExplorado[posf - 2][posc] = 1;
-      mapaExplorado[posf - 2][posc - 1] = 1;
-      mapaExplorado[posf - 2][posc - 2] = 1;
-      mapaExplorado[posf - 1][posc - 2] = 1;
-      mapaExplorado[posf][posc - 2] = 1;
-      break;
-
-    default:
-      break;
-  }
-}
-
   
 // Niveles avanzados (Uso de búsqueda)
 /**
@@ -499,85 +420,57 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_2(Sensores sensores
   return accion;
 }
 
-list<Action> ComportamientoIngeniero::Busqueda_Anchura(const EstadoI &inicio, const EstadoI &final,const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores)
+
+
+list<Action> ComportamientoIngeniero::Busqueda_Anchura( const EstadoI &inicio, const EstadoI &final, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura,  Sensores sensores)
 {
-  NodoI current_node;
-  list<NodoI> frontier;
-  set<NodoI> explored;
-  list<Action> plan;
+    NodoI inicial;
+    inicial.estado = inicio;
 
-  current_node.estado = inicio;
-  frontier.push_back(current_node);
-  bool SolutionFound = ( current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c );
-  while ( !frontier.empty() and !SolutionFound ){
-    frontier.pop_front();
-    explored.insert(current_node);
+    list<NodoI> frontera;
+    set<NodoI> explorados;
+    frontera.push_back(inicial);
 
-    //comprobamos si estoy en una casilla que da las zapatillas
-    if (terreno[current_node.estado.site.f][current_node.estado.site.c] == 'D'){
-      current_node.estado.zapatillas = true;
+    bool found = false;
+    NodoI solution;
+
+    while (!frontera.empty() && !found){
+        NodoI current = frontera.front();
+        frontera.pop_front();
+
+        // Saltar si ya explorado
+        if (explorados.find(current) != explorados.end())
+            continue;
+        explorados.insert(current);
+
+        // Actualizar zapatillas
+        if (terreno[current.estado.site.f][current.estado.site.c] == 'D')
+            current.estado.zapatillas = true;
+
+        // Comprobar objetivo
+        if (current.estado.site.f == final.site.f &&
+            current.estado.site.c == final.site.c){
+            solution = current;
+            found = true;
+            break;
+        }
+
+        // Generar hijos
+        for (Action a : {WALK, JUMP, TURN_SR, TURN_SL}){
+            NodoI child;
+            child.estado = applyI(a, current.estado, terreno, altura, sensores);
+            if (explorados.find(child) == explorados.end()){
+                child.secuencia = current.secuencia;
+                child.secuencia.push_back(a);
+                frontera.push_back(child);
+            }
+        }
     }
 
-    NodoI childjump = current_node;
-    childjump.estado = applyI(JUMP, current_node.estado, terreno, altura,sensores);
-    if (childjump.estado.site.f == final.site.f and childjump.estado.site.c == final.site.c){
-      childjump.secuencia.push_back(JUMP);
-      current_node= childjump;
-      SolutionFound = true;
-    }
-    if(explored.find(childjump) == explored.end()){
-      childjump.secuencia.push_back(JUMP);
-      frontier.push_back(childjump);
-    }
-
-    if(!SolutionFound){
-      //generamos los hijos aplicar walk
-      NodoI childWalk = current_node;
-      childWalk.estado = applyI(WALK, current_node.estado, terreno, altura,sensores);
-      if (childWalk.estado.site.f == final.site.f and childWalk.estado.site.c == final.site.c){
-        childWalk.secuencia.push_back(WALK);
-        current_node= childWalk;
-        SolutionFound = true;
-      }
-      if(explored.find(childWalk) == explored.end()){
-        childWalk.secuencia.push_back(WALK);
-        frontier.push_back(childWalk);
-      }
-    }
-
-    if(!SolutionFound){
-      //hijo resultante aplicar giro izquierda
-      NodoI childTurnSR = current_node;
-      childTurnSR.estado = applyI(TURN_SR, current_node.estado, terreno, altura, sensores);
-      if (explored.find(childTurnSR) == explored.end()){
-        childTurnSR.secuencia.push_back(TURN_SR);
-        frontier.push_back(childTurnSR);
-      }
-
-      //hijo resultante aplicar giro derecha
-      NodoI childTurnSL = current_node;
-      childTurnSL.estado = applyI(TURN_SL, current_node.estado, terreno, altura, sensores);
-      if(explored.find(childTurnSL) == explored.end()){
-        childTurnSL.secuencia.push_back(TURN_SL);
-        frontier.push_back(childTurnSL);
-      }
-    }
-
-    if(!SolutionFound and !frontier.empty()){
-      current_node = frontier.front();
-       while (explored.find(current_node) != explored.end() and !frontier.empty()){
-        frontier.pop_front();
-        current_node = frontier.front();
-       } 
-    }
-
-    if(SolutionFound){
-      plan = current_node.secuencia;
-    }
-  }
-
-  return plan;
+    if (found) return solution.secuencia;
+    return {};
 }
+
 
 bool ComportamientoIngeniero::Find (const NodoI & st, const list<NodoI> &lista){
   auto it = lista.begin();
@@ -614,11 +507,11 @@ EstadoI ComportamientoIngeniero::applyI(Action accion, const EstadoI & st, const
 bool ComportamientoIngeniero::CasillaAccesible(const EstadoI &st, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, int a, Sensores sensores){
   EstadoI next = NextCasilla(st, a);
   bool check1 = false, check2 = false, check3 = false;
-  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M' and terreno[next.site.f][next.site.c] != 'B';
+  check1 = terreno[next.site.f][next.site.c] != 'P' and terreno[next.site.f][next.site.c] != 'M' and terreno[next.site.f][next.site.c] != 'B'  and terreno[next.site.f][next.site.c] != '?';
   check2 = abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 1 or (st.zapatillas and abs(altura[next.site.f][next.site.c] - altura[st.site.f][st.site.c]) <= 2);
   if(a==2) {
     EstadoI medio = NextCasilla(st, 1);
-    check3 = terreno[medio.site.f][medio.site.c] != 'M' and terreno[medio.site.f][medio.site.c] != 'P' and terreno[medio.site.f][medio.site.c] != 'B' and sensores.agentes[2] != 't';
+    check3 = terreno[medio.site.f][medio.site.c] != 'M' and terreno[medio.site.f][medio.site.c] != 'P' and terreno[medio.site.f][medio.site.c] != 'B' and terreno[medio.site.f][medio.site.c] != '?';
     return check1 and check2 and check3;
   }
   return check1 and check2;
@@ -690,127 +583,184 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
     planTub = Busqueda(inicio, mapaResultado, mapaCotas, sensores);
 
     if (!planTub.empty()) {
-      PintaPlan(planTub);
       VisualizaRedTuberias(planTub);
     } else {
       cout << "No se encontro plan de tuberias" << endl;
     }
-    hayPlan = true;  // Ya intentamos buscar, no volver a intentarlo
   }
 
-  // En nivel 4 solo planificamos, el agente se queda quieto
   return IDLE;
 }
 
-list<Paso> ComportamientoIngeniero::Busqueda( const Paso &inicio,  const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura, Sensores sensores)
+list<Paso> ComportamientoIngeniero::Busqueda( const Paso &inicio, const vector<vector<unsigned char>> &terreno, const vector<vector<unsigned char>> &altura,  Sensores sensores)
 {
   NodoTub current_node;
   queue<NodoTub> frontier;
-  set<pair<int,int>> explored;
+
+  map<tuple<int,int,int>, int> best_cost;
+
   list<Paso> plan;
 
   current_node.actual = inicio;
-  current_node.coste = costeD(current_node.actual, terreno);
+  current_node.coste = 0;
   current_node.paso = 0;
   current_node.alt = altura[inicio.fil][inicio.col];
+
+  auto try_push = [&](NodoTub &n) {
+    auto key = make_tuple(n.actual.fil, n.actual.col, n.alt);
+
+    // Solo podo si ya llegué con menor o igual coste
+    if (best_cost.find(key) == best_cost.end() || n.coste < best_cost[key]) {
+      best_cost[key] = n.coste;
+      frontier.push(n);
+    }
+  };
+
   current_node.secuencia.push_back(inicio);
   frontier.push(current_node);
 
-  bool SolutionFound = false;
-
-  while (!frontier.empty() && !SolutionFound) {
+  while (!frontier.empty()) {
 
     current_node = frontier.front();
     frontier.pop();
 
-    pair<int,int> pos = {current_node.actual.fil, current_node.actual.col};
-
-    if (explored.find(pos) != explored.end())
-      continue;
-
-    explored.insert(pos);
-
-    if (terreno[pos.first][pos.second] == 'U') {
-      plan = current_node.secuencia;
-      SolutionFound = true;
+    // Objetivo
+    if (terreno[current_node.actual.fil][current_node.actual.col] == 'U') {
+      return current_node.secuencia;
     }
-    else {
 
-      vector<pair<int,int>> movimientos = { {0,-1}, {-1,0}, {1,0}, {0,1} };
+    vector<pair<int,int>> movimientos = { {0,-1}, {-1,0}, {1,0}, {0,1} };
 
-      for (auto m : movimientos) {
+    for (auto m : movimientos) {
 
-        NodoTub child = current_node;
-        child.actual.fil = current_node.actual.fil + m.first;
-        child.actual.col = current_node.actual.col + m.second;
-        child.actual.op = 0;
+      NodoTub child = current_node;
+      child.actual.fil += m.first;
+      child.actual.col += m.second;
+      child.actual.op = 0;
 
-        char casilla = terreno[child.actual.fil][child.actual.col];
+      char casilla = terreno[child.actual.fil][child.actual.col];
 
-        if (casilla != 'P' and casilla != 'M' and casilla != 'B'){
+      if (casilla != 'P' && casilla != 'M' && casilla != 'B' and casilla != '?') {
 
-          child.coste +=  costeD(child.actual,  terreno);
-          printf("Coste: %d\n", child.coste);
-          child.paso ++;
-          child.alt = altura[child.actual.fil][child.actual.col];
-          int difalt = current_node.alt - child.alt;
+        child.coste += costeD(current_node.actual, child.actual, terreno);
+        child.paso++;
+        child.alt = altura[child.actual.fil][child.actual.col];
 
-          if(child.coste < sensores.max_ecologico){
-            if (difalt == 0 || difalt == 1){
-              child.secuencia.push_back(child.actual);
-              if (terreno[child.actual.fil][child.actual.col] == 'U') {
-                plan = child.secuencia;
-                SolutionFound = true;
+        int difalt = current_node.alt - child.alt;
+
+        if (child.coste <= sensores.max_ecologico) {
+
+          // -------- MOVIMIENTO NORMAL --------
+          if (difalt == 0 || difalt == 1) {
+
+            NodoTub next = child;
+            next.secuencia.push_back(next.actual);
+
+            if (terreno[next.actual.fil][next.actual.col] == 'U')
+              return next.secuencia;
+
+            try_push(next);
+
+            // -------- SUBIR --------
+            if (difalt == 1 && casilla != 'A') {
+
+              NodoTub subida = child;
+
+              if (casilla == 'H') subida.coste += 55;
+              else if (casilla == 'S') subida.coste += 30;
+              else if (casilla == 'C' || casilla == 'U') subida.coste += 10;
+              else subida.coste += 40;
+
+              if (subida.coste <= sensores.max_ecologico) {
+                subida.actual.op = 1;
+                subida.alt += 1;
+                subida.secuencia.push_back(subida.actual);
+
+                if (terreno[subida.actual.fil][subida.actual.col] == 'U')
+                  return subida.secuencia;
+
+                try_push(subida);
               }
-              else frontier.push(child);
             }
-            else if (difalt == 2 and casilla != 'A'){
-              if (casilla == 'H') child.coste += 55;
-              else if (casilla == 'S') child.coste += 30;
-              else if (casilla == 'C' || casilla == 'U') child.coste += 10;
-              else child.coste += 40;
 
-              if(child.coste < sensores.max_ecologico){
-                child.actual.op = 1;
-                child.alt += 1;
-                child.secuencia.push_back(child.actual);
-                if (terreno[child.actual.fil][child.actual.col] == 'U') {
-                  plan = child.secuencia;
-                  SolutionFound = true;
-                }
-                else frontier.push(child);
+            // -------- BAJAR --------
+            else if (difalt == 0 && casilla != 'A') {
+
+              NodoTub bajada = child;
+
+              if (casilla == 'H') bajada.coste += 65;
+              else if (casilla == 'S') bajada.coste += 40;
+              else if (casilla == 'C' || casilla == 'U') bajada.coste += 25;
+              else bajada.coste += 50;
+
+              if (bajada.coste <= sensores.max_ecologico) {
+                bajada.actual.op = -1;
+                bajada.alt -= 1;
+                bajada.secuencia.push_back(bajada.actual);
+
+                if (terreno[bajada.actual.fil][bajada.actual.col] == 'U')
+                  return bajada.secuencia;
+
+                try_push(bajada);
               }
             }
-            else if (difalt == -1  and casilla != 'A'){
+          }
 
-              if (casilla == 'H') child.coste += 65;
-              else if (casilla == 'S') child.coste += 40;
-              else if (casilla == 'C' || casilla == 'U') child.coste += 25;
-              else child.coste += 50;
+          // -------- SUBIR DOS --------
+          else if (difalt == 2 && casilla != 'A') {
 
-              if(child.coste < sensores.max_ecologico){
-                child.actual.op = -1;
-                child.alt -= 1;
-                child.secuencia.push_back(child.actual);
-                if (terreno[child.actual.fil][child.actual.col] == 'U') {
-                  plan = child.secuencia;
-                  SolutionFound = true;
-                }
-                else frontier.push(child);
-              }
+            NodoTub subida = child;
+
+            if (casilla == 'H') subida.coste += 55;
+            else if (casilla == 'S') subida.coste += 30;
+            else if (casilla == 'C' || casilla == 'U') subida.coste += 10;
+            else subida.coste += 40;
+
+            if (subida.coste <= sensores.max_ecologico) {
+              subida.actual.op = 1;
+              subida.alt += 1;
+              subida.secuencia.push_back(subida.actual);
+
+              if (terreno[subida.actual.fil][subida.actual.col] == 'U')
+                return subida.secuencia;
+
+              try_push(subida);
+            }
+          }
+
+          // -------- BAJAR --------
+          else if (difalt == -1 && casilla != 'A') {
+
+            NodoTub bajada = child;
+
+            if (casilla == 'H') bajada.coste += 65;
+            else if (casilla == 'S') bajada.coste += 40;
+            else if (casilla == 'C' || casilla == 'U') bajada.coste += 25;
+            else bajada.coste += 50;
+
+            if (bajada.coste <= sensores.max_ecologico) {
+              bajada.actual.op = -1;
+              bajada.alt -= 1;
+              bajada.secuencia.push_back(bajada.actual);
+
+              if (terreno[bajada.actual.fil][bajada.actual.col] == 'U')
+                return bajada.secuencia;
+
+              try_push(bajada);
             }
           }
         }
       }
     }
   }
-    
+
   return plan;
 }
 
-int ComportamientoIngeniero::costeD(Paso &destino, const vector<vector<unsigned char>> &terreno){
+int ComportamientoIngeniero::costeD(Paso &inicio,Paso &destino, const vector<vector<unsigned char>> &terreno){
 
   char casilla = terreno[destino.fil][destino.col];
+  char casilla2 = terreno[inicio.fil][inicio.col];
   int coste = 0;
 
   if (casilla == 'A')  coste = 50;
@@ -818,8 +768,28 @@ int ComportamientoIngeniero::costeD(Paso &destino, const vector<vector<unsigned 
   else if( casilla == 'S') coste = 25;
   else if( casilla == 'C' or casilla == 'U') coste = 15;
   else coste = 30;
+
+  if (casilla2 == 'A')  coste += 50;
+  else if( casilla2 == 'H') coste += 45;
+  else if( casilla2 == 'S') coste += 25;
+  else if( casilla2 == 'C' or casilla2 == 'U') coste += 15;
+  else coste += 30;
   
   return coste;
+}
+
+
+Orientacion calcularOrientacion(int f1, int c1, int f2, int c2){
+    int df = f2 - f1;
+    int dc = c2 - c1;
+
+    if (abs(df) > abs(dc)) {
+        if (df < 0) return norte;
+        else return sur;
+    } else {
+        if (dc > 0) return este;
+        else return oeste;
+    }
 }
 
 /**
@@ -829,7 +799,106 @@ int ComportamientoIngeniero::costeD(Paso &destino, const vector<vector<unsigned 
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores)
 {
-  return IDLE;
+  Action accion = IDLE;
+
+  ActualizarMapa(sensores);
+
+  if(!ingenieropos and !hayPlan){
+    EstadoI inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+    plan = Busqueda_Anchura(inicio, fin, mapaResultado, mapaCotas, sensores);
+    VisualizaPlan(inicio.site,plan);
+    hayPlan = plan.size() != 0 ;
+  }
+  if (hayPlan and plan.size()>0 and !ingenieropos){
+    accion = plan.front();
+    plan.pop_front();
+  }
+  else if (plan.size()== 0 and !ingenieropos){
+    ingenieropos = true;
+    hayPlan= false;
+  }
+
+  if(ingenieropos and !plantuberias){
+    Paso inicio;
+    inicio.fil = sensores.BelPosF;
+    inicio.col = sensores.BelPosC;
+    inicio.op  = 0;
+
+    planTub = Busqueda(inicio, mapaResultado, mapaCotas, sensores);
+
+    if (!planTub.empty())  VisualizaRedTuberias(planTub);
+    else  cout << "No se encontro plan de tuberias" << endl;
+    plantuberias = true;
+    sacarinfo = true;
+    primeravez = true;
+  }
+
+  if(plantuberias){
+    if (sacarinfo ){
+      if (!planTub.empty()){
+        meta = planTub.front();
+        planTub.pop_front();
+        sacarinfo = false;
+        mirartec = calcularOrientacion(meta.fil, meta.col ,sensores.posF ,sensores.posC);
+        if(!primeravez)accion = COME;
+      } else {
+        plantuberias = false;
+      }
+    }
+    else if(!alteradoterreno or primeravez) {
+      if(meta.op == -1) accion = DIG;
+      else if(meta.op == 1) accion = RAISE;
+      alteradoterreno = true;
+      if(primeravez){
+        primeravez = false;
+        sacarinfo = true;
+      }
+    }
+    else if(posicionado){
+      if(sensores.enfrente) {
+        cout << "INSTALO ingeniero" << endl;
+        accion = INSTALL;
+        posicionado = false;
+        sacarinfo = true;
+      }
+      else if(mirartec != sensores.rumbo) accion = TURN_SR;
+      else accion = IDLE;
+    }
+    else {
+        if(!hayPlan){
+          EstadoI inicio, fin;
+          inicio.site.f = sensores.posF;
+          inicio.site.c = sensores.posC;
+          inicio.site.brujula = sensores.rumbo;
+          inicio.zapatillas = tiene_zapatillas;
+          fin.site.f = meta.fil;
+          fin.site.c = meta.col;
+          plan = Busqueda_Anchura(inicio, fin, mapaResultado, mapaCotas, sensores);
+          
+          VisualizaPlan(inicio.site,plan);
+          hayPlan = plan.size() != 0 ;
+        }
+        if(hayPlan and  plan.size()>0){
+          //cout <<  "saco plansito " <<endl;
+          accion = plan.front();
+          plan.pop_front();
+        }
+        else if (plan.size()== 0 and hayPlan ){
+          //cout <<  "telmine el plansito " <<endl;
+          hayPlan = false;
+          posicionado = true;
+          alteradoterreno = false;
+        }
+    }
+  }
+
+  return accion;
 }
 
 /**
@@ -839,8 +908,204 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_6(Sensores sensores)
 {
-  return IDLE;
+
+  Action accion = IDLE;
+  ActualizarMapa(sensores);
+
+  if(!encontrefab){
+    mapaExplorado[sensores.posF][sensores.posC] ++; // Marcar la posición actual como explorada
+
+    if(sensores.superficie[0] == 'U' and tratamiento.c != sensores.posC and tratamiento.f !=  sensores.posF ){
+      tratamiento.c = sensores.posC;
+      tratamiento.f = sensores.posF;
+      encontrefab = true;
+    }
+    if(sensores.superficie[0] == 'D'){
+      tiene_zapatillas = true;
+    }
+
+    if( giros >= 8){
+      bucle = true;
+    }
+
+    if( ultima_accion==TURN_SL) giros++;
+    else giros = 0;
+
+    char adelante = ViablePorAltura(sensores.superficie[2], sensores.agentes[2], sensores.cota[2] - sensores.cota[0], tiene_zapatillas);
+
+    Orientacion rumboi = sensores.rumbo;
+    Orientacion rumbod = rumboi ;
+
+    if (sensores.rumbo == norte){
+      rumboi = noroeste;
+      rumbod = noreste;
+    }
+    else if(sensores.rumbo == noreste){
+      rumboi = norte;
+      rumbod = este;
+    }
+    else if(sensores.rumbo == este){
+      rumboi = noreste;
+      rumbod = sureste;
+    }
+    else if(sensores.rumbo == sureste){
+      rumboi = este;
+      rumbod = sur;
+    }
+    else if(sensores.rumbo == sur){
+      rumboi = sureste;
+      rumbod = suroeste;
+    }
+    else if(sensores.rumbo == suroeste){
+      rumboi = sur;
+      rumbod = oeste;
+    }
+    else if(sensores.rumbo == oeste){
+      rumboi = suroeste;
+      rumbod = noroeste;
+    }
+    else if(sensores.rumbo == noroeste){
+      rumboi = oeste;
+      rumbod = norte;
+    }
+
+
+    char i = ViablePorAltura_1(sensores.superficie[1], sensores.agentes[1], sensores.cota[1] - sensores.cota[0], tiene_zapatillas,vecesVistas(sensores.posF, sensores.posC, rumboi));
+    char c = ViablePorAltura_1(sensores.superficie[2], sensores.agentes[2], sensores.cota[2] - sensores.cota[0], tiene_zapatillas, vecesVistas(sensores.posF, sensores.posC, sensores.rumbo));
+    char d = ViablePorAltura_1(sensores.superficie[3], sensores.agentes[3], sensores.cota[3] - sensores.cota[0], tiene_zapatillas, vecesVistas(sensores.posF, sensores.posC, rumbod));
+
+    int pos = VeoCasillaInteresante_1(i, c, d, tiene_zapatillas);
+
+    //printf ("Posicion: %d, %d, Rumbo: %d, Superficie: %c, Cota: %d, Zapatillas: %d pos: %d c: %c d: %c i: %c\n", sensores.posF, sensores.posC, sensores.rumbo, sensores.superficie[0], sensores.cota[0], tiene_zapatillas, pos, c, d, i);
+    switch (pos)
+    {
+    case 3:
+      accion = TURN_SR;
+      break;
+    case 2:
+      accion = WALK;
+      break;
+    default:
+      if(bucle and adelante != 'P'){
+        accion = WALK;
+        bucle = false;
+      } 
+      else accion = TURN_SL;
+      break;
+    }
+  }
+
+  if(!ingenieropos and !hayPlan and encontrefab){
+    
+    EstadoI inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+    plan = Busqueda_Anchura(inicio, fin, mapaResultado, mapaCotas, sensores);
+    VisualizaPlan(inicio.site,plan);
+    hayPlan = plan.size() != 0 ;
+  }
+  if (hayPlan and plan.size()>0 and !ingenieropos and encontrefab){
+    
+    accion = plan.front();
+    plan.pop_front();
+  }
+  else if (plan.size()== 0 and !ingenieropos and encontrefab){
+    
+    ingenieropos = true;
+    hayPlan= false;
+  }
+
+  if(ingenieropos and !plantuberias){
+    
+    Paso inicio;
+    inicio.fil = sensores.BelPosF;
+    inicio.col = sensores.BelPosC;
+    inicio.op  = 0;
+
+    planTub = Busqueda(inicio, mapaResultado, mapaCotas, sensores);
+
+    if (!planTub.empty()) {
+      VisualizaRedTuberias(planTub);
+      
+      plantuberias = true;
+      sacarinfo = true;
+      primeravez = true;
+    } 
+    else  {
+      ingenieropos = false;
+      encontrefab = false;
+    }
+  }
+
+  if(plantuberias){
+
+    if (sacarinfo ){
+      if (!planTub.empty()){
+        meta = planTub.front();
+        planTub.pop_front();
+        sacarinfo = false;
+        mirartec = calcularOrientacion(meta.fil, meta.col ,sensores.posF ,sensores.posC);
+        if(!primeravez)accion = COME;
+      } else {
+        plantuberias = false;
+      }
+    }
+    else if(!alteradoterreno or primeravez) {
+      if(meta.op == -1) accion = DIG;
+      else if(meta.op == 1) accion = RAISE;
+      alteradoterreno = true;
+      if(primeravez){
+        primeravez = false;
+        sacarinfo = true;
+      }
+    }
+    else if(posicionado){
+      if(sensores.enfrente) {
+        
+        accion = INSTALL;
+        posicionado = false;
+        sacarinfo = true;
+      }
+      else if(mirartec != sensores.rumbo) accion = TURN_SR;
+      else accion = IDLE;
+    }
+    else {
+        if(!hayPlan){
+          EstadoI inicio, fin;
+          inicio.site.f = sensores.posF;
+          inicio.site.c = sensores.posC;
+          inicio.site.brujula = sensores.rumbo;
+          inicio.zapatillas = tiene_zapatillas;
+          fin.site.f = meta.fil;
+          fin.site.c = meta.col;
+          plan = Busqueda_Anchura(inicio, fin, mapaResultado, mapaCotas, sensores);
+          
+          VisualizaPlan(inicio.site,plan);
+          hayPlan = plan.size() != 0 ;
+        }
+        if(hayPlan and  plan.size()>0){
+          //cout <<  "saco plansito " <<endl;
+          accion = plan.front();
+          plan.pop_front();
+        }
+        else if (plan.size()== 0 and hayPlan ){
+          //cout <<  "telmine el plansito " <<endl;
+          hayPlan = false;
+          posicionado = true;
+          alteradoterreno = false;
+        }
+    }
+  }
+
+  ultima_accion = accion;
+  return accion;
 }
+
+
 
 // =========================================================================
 // FUNCIONES PROPORCIONADAS
